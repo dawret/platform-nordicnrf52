@@ -37,7 +37,7 @@
       "optional": true,
       "version": "~1.503.0"
     },
-    "tool-nrfutil": {
+    "tool-nordic-nrfutil": {
       "owner": "dawret",
       "optional": false,
       "version": "file:///mnt/nordic-nrfutil"

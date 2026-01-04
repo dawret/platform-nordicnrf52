@@ -14,7 +14,25 @@
 
 
 from platformio.public import PlatformBase
+import platform
+
+
 class Nordicnrf52Platform(PlatformBase):
+
+    def configure_default_packages(self, options, targets):
+        board = options.get("board")
+
+        if platform.system().lower() == "linux" and (
+            platform.machine() == "aarch64" or platform.machine() == "arm64"
+        ):
+            # On Linux arm64, the "new" nrfutil doesn not support generating DFU packages. We can use adafruit-nrfutil instead.
+            self.packages["tool-adafruit-nrfutil"]["optional"] = False
+
+        if board:
+            if self.board_config(board).get("build.bsp.name", "nrf5") == "adafruit":
+                self.packages["tool-adafruit-nrfutil"]["optional"] = False
+
+        return super().configure_default_packages(options, targets)
 
     def is_embedded(self):
         return True
