@@ -30,7 +30,7 @@
       "type": "framework",
       "optional": false,
       "owner": "tomaszduda23",
-      "version": "https://github.com/dawret/framework-sdk-nrf/archive/refs/tags/v3.2.0-3.tar.gz"
+      "version": "https://github.com/dawret/framework-sdk-nrf/archive/refs/tags/v3.2.0-4.tar.gz"
     },
     "tool-adafruit-nrfutil": {
       "owner": "platformio",
@@ -40,7 +40,7 @@
     "tool-nordic-nrfutil": {
       "owner": "dawret",
       "optional": false,
-      "version": "https://github.com/dawret/nordic-nrfutil/archive/refs/tags/v0.2.tar.gz"
+      "version": "https://github.com/dawret/nordic-nrfutil/archive/refs/tags/v0.2.1.tar.gz"
     },
     "tool-jlink": {
       "type": "uploader",

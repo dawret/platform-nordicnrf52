@@ -175,10 +175,6 @@ if "dfu_uf2" == upload_protocol:
 if not env.get("PIOFRAMEWORK"):
     env.SConscript("frameworks/_bare.py")
 
-#
-# Target: Build executable and linkable firmware
-#
-
 if "zephyr" in env.get("PIOFRAMEWORK", []):
     env.SConscript(
         join(
@@ -199,10 +195,6 @@ target_hex = env.WestBuilder(env.subst("$PROGPATH"), [])
 target_hexbuildprog = env.Alias("hexbuildprog", target_hex, target_hex)
 AlwaysBuild(target_hexbuildprog)
 target_firm = target_hex
-
-#
-# Target: Upload by default .bin file
-#
 
 upload_actions = []
 
