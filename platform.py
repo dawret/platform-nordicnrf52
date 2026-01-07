@@ -23,7 +23,7 @@ class Nordicnrf52Platform(PlatformBase):
         board = options.get("board")
 
         if board:
-            if self.board_config(board).get("build.bsp.name", "nrf5") == "adafruit":
+            if self.board_config(board).get("bootloader", "none") == "adafruit":
                 self.packages["tool-adafruit-nrfutil"]["optional"] = False
 
         return super().configure_default_packages(options, targets)

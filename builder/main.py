@@ -36,6 +36,7 @@ def get_zephyr_config(env, name):
 
 env = DefaultEnvironment()
 platform = env.PioPlatform()
+board = env.BoardConfig()
 
 try:
     import sdk as nrfutil_sdk
@@ -63,14 +64,7 @@ Supported upload methods:
 
 upload_port = env.subst("$UPLOAD_PORT")
 upload_protocol = env.subst("$UPLOAD_PROTOCOL")
-
-UF2_VIDS = [
-    0x239A,  # Adafruit
-    0x2886,  # Seeed Xiao
-]
-NORDIC_VIDS = [
-    0x1915,  # Nordic open bootloader
-]
+bootloader = board.get("bootloader", "none")
 
 
 def get_serial_port_info(port_name):
@@ -88,11 +82,15 @@ if not upload_protocol:
     if upload_port == "swd":
         upload_protocol = "swd"
     elif serial_port is not None:
-        upload_protocol = "dfu_adafruit"
-        if serial_port.vid in NORDIC_VIDS:
+        if bootloader == "nordic":
             upload_protocol = "dfu_nordic"
+        elif bootloader == "adafruit":
+            upload_protocol = "dfu_adafruit"
+        else:
+            raise RuntimeError(f"Invalid bootloader type '{bootloader}'")
     elif (
-        upload_port
+        bootloader == "adafruit"
+        and upload_port
         and Path(upload_port).is_dir()
         and (Path(upload_port) / "INFO_UF2.TXT").is_file()
     ):
