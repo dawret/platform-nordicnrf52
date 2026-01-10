@@ -12,6 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import os
 import sys
 from os.path import join, isfile
 from pathlib import Path
@@ -228,7 +229,7 @@ if upload_protocol == "swd":
             UPLOADCMD="$UPLOADER flash -r $WEST_RUNNER $UPLOADERFLAGS --build-dir $BUILD_DIR",
             ENV=west_env,
         )
-        cmd = env.Action("$UPLOADCMD", "Uploading $SOURCE", chdir=sdk.sdk_path)
+        cmd = env.Action("$UPLOADCMD", "Uploading $SOURCE", chdir=str(sdk.sdk_path))
         return cmd(target, source, env)
 
     upload_actions = [upload_swd]
