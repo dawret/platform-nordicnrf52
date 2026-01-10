@@ -38,7 +38,7 @@ def before_upload(target, source, env):  # pylint: disable=W0613,W0621
 
 
 def get_zephyr_config(env, name):
-    config_path = join(env.subst("$BUILD_DIR"), "app", "zephyr", ".config")
+    config_path = join(env.subst("$BUILD_DIR"), "zephyr", "zephyr", ".config")
     if isfile(config_path):
         with open(config_path) as f:
             for line in f:
