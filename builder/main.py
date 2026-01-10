@@ -213,14 +213,20 @@ upload_actions = []
 
 if upload_protocol == "swd":
     if not env.get("WEST_RUNNER"):
-        env.Replace(WEST_RUNNER="pyocd")
+        env.Replace(WEST_RUNNER="jlink")
+    jlink_dir = platform.get_package_dir("tool-jlink")
 
     def upload_swd(target, source, env):
         sdk = nrfutil_sdk.get_sdk(platform)
+        west_env = sdk.env.copy()
+        west_env["PATH"] = f"{jlink_dir}{os.pathsep}{west_env.get('PATH','')}"
+        west_env["LD_LIBRARY_PATH"] = (
+            f"{jlink_dir}{os.pathsep}{west_env.get('LD_LIBRARY_PATH','')}"
+        )
         env.Replace(
             UPLOADER="west",
             UPLOADCMD="$UPLOADER flash -r $WEST_RUNNER $UPLOADERFLAGS --build-dir $BUILD_DIR",
-            ENV=sdk.env,
+            ENV=west_env,
         )
         cmd = env.Action("$UPLOADCMD", "Uploading $SOURCE", chdir=sdk.sdk_path)
         return cmd(target, source, env)
