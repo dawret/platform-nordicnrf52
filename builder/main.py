@@ -23,6 +23,19 @@ from SCons.Script import (
     DefaultEnvironment,
 )
 
+from platformio.public import list_serial_ports
+
+
+def before_upload(target, source, env):  # pylint: disable=W0613,W0621
+    print("Resetting device into bootloader mode...")
+    env.FlushSerialBuffer("$UPLOAD_PORT")
+
+    before_ports = list_serial_ports()
+
+    env.TouchSerialPort("$UPLOAD_PORT", 1200)
+
+    env.Replace(UPLOAD_PORT=env.WaitForNewSerialPort(before_ports))
+
 
 def get_zephyr_config(env, name):
     config_path = join(env.subst("$BUILD_DIR"), "app", "zephyr", ".config")
@@ -244,12 +257,11 @@ elif upload_protocol == "dfu_adafruit":
             "-b",
             "$UPLOAD_SPEED",
             "--singlebank",
-            "-t",
-            "1200",
         ],
         UPLOADCMD='"$PYTHONEXE" "$UPLOADER" $UPLOADERFLAGS -pkg $SOURCE',
     )
     upload_actions = [
+        env.VerboseAction(before_upload, "Attempting reset to bootloader..."),
         env.VerboseAction("$UPLOADCMD", "Uploading $SOURCE"),
     ]
 elif upload_protocol == "dfu_nordic":
@@ -262,7 +274,10 @@ elif upload_protocol == "dfu_nordic":
             str(source[0]),
         )
 
-    upload_actions = [upload_nordic]
+    upload_actions = [
+        env.VerboseAction(before_upload, "Attempting reset to bootloader..."),
+        env.VerboseAction(upload_nordic, "Uploading $SOURCE"),
+    ]
 elif upload_protocol == "dfu_mcumgr":
     sys.stderr.write("Error! mcumgr flashing not implemented yet\n")
 # custom upload tool
