@@ -60,7 +60,7 @@ except ImportError:
         raise RuntimeError("framework-zephyr directory not found")
     sys.path.append(str(framework_dir))
     import sdk as nrfutil_sdk
-nrfutil = nrfutil_sdk.get_nrfutil(platform)
+nrfutil = nrfutil_sdk.get_nrfutil(env)
 
 env.Replace(PROGSUFFIX=".hex")
 
@@ -157,7 +157,7 @@ if "dfu_uf2" == upload_protocol:
 
     def build_uf2(target, source, env):
         family_id = get_zephyr_config(env, "CONFIG_BUILD_OUTPUT_UF2_FAMILY_ID")
-        uf2conv = nrfutil_sdk.get_uf2conv(platform)
+        uf2conv = nrfutil_sdk.get_uf2conv(env)
         cmd = env.VerboseAction(
             " ".join(
                 [
@@ -218,7 +218,7 @@ if upload_protocol == "swd":
     jlink_dir = platform.get_package_dir("tool-jlink")
 
     def upload_swd(target, source, env):
-        sdk = nrfutil_sdk.get_sdk(platform)
+        sdk = nrfutil_sdk.get_sdk(env)
         west_env = sdk.env.copy()
         west_env["PATH"] = f"{jlink_dir}{os.pathsep}{west_env.get('PATH','')}"
         west_env["LD_LIBRARY_PATH"] = (
@@ -237,7 +237,7 @@ elif upload_protocol == "dfu_uf2":
     target_firm = env.PackageUf2(join("$BUILD_DIR", "${PROGNAME}"), target_hex)
 
     def upload_uf2(target, source, env):
-        uf2conv = nrfutil_sdk.get_uf2conv(platform)
+        uf2conv = nrfutil_sdk.get_uf2conv(env)
         env.Replace(
             UPLOADER=str(uf2conv),
             UPLOADERFLAGS=["-D", "-d", "$UPLOAD_PORT"],
