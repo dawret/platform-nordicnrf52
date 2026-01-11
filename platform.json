@@ -18,7 +18,7 @@
     "type": "git",
     "url": "https://github.com/platformio/platform-nordicnrf52.git"
   },
-  "version": "11.0.0",
+  "version": "11.1.2",
   "frameworks": {
     "zephyr": {
       "package": "framework-zephyr",
@@ -29,8 +29,8 @@
     "framework-zephyr": {
       "type": "framework",
       "optional": false,
-      "owner": "tomaszduda23",
-      "version": "https://github.com/dawret/framework-sdk-nrf/archive/refs/tags/v3.2.0-4.tar.gz"
+      "owner": "dawret",
+      "version": "https://github.com/dawret/framework-sdk-nrf/archive/refs/tags/v2.9.2-1.tar.gz"
     },
     "tool-adafruit-nrfutil": {
       "owner": "platformio",
@@ -40,7 +40,7 @@
     "tool-nordic-nrfutil": {
       "owner": "dawret",
       "optional": false,
-      "version": "https://github.com/dawret/nordic-nrfutil/archive/refs/tags/v0.2.1.tar.gz"
+      "version": "https://github.com/dawret/nordic-nrfutil/archive/refs/tags/v0.2.2.tar.gz"
     },
     "tool-jlink": {
       "type": "uploader",
