@@ -34,7 +34,7 @@
     },
     "tool-adafruit-nrfutil": {
       "owner": "platformio",
-      "optional": true,
+      "optional": false,
       "version": "~1.503.0"
     },
     "tool-nordic-nrfutil": {
@@ -44,7 +44,7 @@
     },
     "tool-jlink": {
       "type": "uploader",
-      "optional": true,
+      "optional": false,
       "owner": "platformio",
       "version": "^1.63208.0"
     }
