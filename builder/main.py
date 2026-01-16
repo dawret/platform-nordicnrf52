@@ -289,7 +289,6 @@ def upload_uf2_adafruit():
         return cmd(target, source, env)
 
     return [
-        env.Action(reset_to_bootloader),
         upload_action,
     ]
 
