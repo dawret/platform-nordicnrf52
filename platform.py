@@ -19,14 +19,5 @@ import platform
 
 class Nordicnrf52Platform(PlatformBase):
 
-    def configure_default_packages(self, options, targets):
-        board = options.get("board")
-
-        if board:
-            if self.board_config(board).get("bootloader", "none") == "adafruit":
-                self.packages["tool-adafruit-nrfutil"]["optional"] = False
-
-        return super().configure_default_packages(options, targets)
-
     def is_embedded(self):
         return True
