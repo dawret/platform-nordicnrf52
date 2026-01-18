@@ -266,8 +266,6 @@ def upload_swd(runner):
             UPLOADCMD="$UPLOADER flash -r $WEST_RUNNER $UPLOADERFLAGS --build-dir $BUILD_DIR",
             ENV=west_env,
         )
-        print(env.subst("$UPLOADCMD"))
-        print("AAAAAA")
         cmd = env.Action("$UPLOADCMD", "Uploading $SOURCE", chdir=str(sdk.sdk_path))
         return cmd(target, source, env)
 
