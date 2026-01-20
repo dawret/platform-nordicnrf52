@@ -262,8 +262,7 @@ def upload_swd(runner):
         env.Replace(
             UPLOADER="west",
             WEST_RUNNER=runner,
-            UPLOADERFLAGS=[],
-            UPLOADCMD="$UPLOADER flash -r $WEST_RUNNER $UPLOADERFLAGS --build-dir $BUILD_DIR",
+            UPLOADCMD="$UPLOADER flash -r $WEST_RUNNER --build-dir $BUILD_DIR -- $UPLOADERFLAGS",
             ENV=west_env,
         )
         cmd = env.Action("$UPLOADCMD", "Uploading $SOURCE", chdir=str(sdk.sdk_path))
@@ -297,27 +296,30 @@ target_dfu_adafruit = env.PackageDfuAdafruit(
 
 
 def upload_serial_adafruit():
-    if not env.get("UPLOAD_SPEED"):
-        env.Replace(UPLOAD_SPEED="115200")
-    env.Replace(
-        UPLOADER=join(
-            platform.get_package_dir("tool-adafruit-nrfutil") or "",
-            "adafruit-nrfutil.py",
-        ),
-        UPLOADERFLAGS=[
-            "dfu",
-            "serial",
-            "-p",
-            "$UPLOAD_PORT",
-            "-b",
-            "$UPLOAD_SPEED",
-            "--singlebank",
-        ],
-        UPLOADCMD='"$PYTHONEXE" "$UPLOADER" $UPLOADERFLAGS -pkg $SOURCE',
-    )
+    def upload_action(target, source, env):
+        if not env.get("UPLOAD_SPEED"):
+            env.Replace(UPLOAD_SPEED="115200")
+        env.Replace(
+            UPLOADER=join(
+                platform.get_package_dir("tool-adafruit-nrfutil") or "",
+                "adafruit-nrfutil.py",
+            ),
+            UPLOADERFLAGS=[
+                "dfu",
+                "serial",
+                "-p",
+                "$UPLOAD_PORT",
+                "-b",
+                "$UPLOAD_SPEED",
+                "--singlebank",
+            ],
+            UPLOADCMD='"$PYTHONEXE" "$UPLOADER" $UPLOADERFLAGS -pkg $SOURCE',
+            cmd=env.VerboseAction("$UPLOADCMD", "Uploading $SOURCE"),
+        )
+
     return [
         env.Action(reset_to_bootloader),
-        env.VerboseAction("$UPLOADCMD", "Uploading $SOURCE"),
+        upload_action,
     ]
 
 
