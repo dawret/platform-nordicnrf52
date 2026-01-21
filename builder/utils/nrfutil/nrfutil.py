@@ -1,6 +1,5 @@
-from .util import check_command_return
+from .utils import exec_command
 from pathlib import Path
-from platformio.proc import exec_command
 import json
 import shutil
 
@@ -36,10 +35,9 @@ class NrfUtil:
 
     def run_subcommand(self, name, args):
         cmd = [self.executable, name] + args
-        ret = exec_command(cmd)
-        check_command_return(ret, f"nrfutil {name} command failed")
-        return ret["out"]
-    
+        ret = exec_command(cmd, f"nrfutil {name} command failed")
+        return ret.stdout
+
     def get_sdk(self, version, location: Path):
         path = self.get_sdk_path(version, location)
         if path is None:
@@ -54,7 +52,6 @@ class NrfUtil:
             fresh_install=False,
         )
 
-
     def install_sdk(self, version, location: Path):
         fresh_install = self.get_sdk_path(version, location) is None
         args = [
@@ -65,8 +62,7 @@ class NrfUtil:
             "--install-dir",
             str(location),
         ] + self.default_args
-        ret = exec_command(args)
-        check_command_return(ret, f"Failed to install SDK version {version}")
+        exec_command(args, f"Failed to install SDK version {version}")
         shutil.rmtree(location / "downloads", ignore_errors=True)
         print(f"SDK version {version} installed successfully at {location}.")
         return NrfUtilSdk(
@@ -87,11 +83,10 @@ class NrfUtil:
             "--install-dir",
             str(install_location),
         ] + self.default_args
-        ret = exec_command(args)
-        check_command_return(ret, "Failed to list SDK versions")
-        if ret["out"].strip() == "" or "data" not in ret["out"]:
+        ret = exec_command(args, "Failed to list SDK versions")
+        if ret.stdout.strip() == "" or "data" not in ret.stdout:
             return []
-        out = json.loads(ret["out"])
+        out = json.loads(ret.stdout)
         return out["data"]["versions"]
 
     def get_toolchain_path(self, version, install_location: Path):
@@ -121,11 +116,8 @@ class NrfUtil:
             "--install-dir",
             str(install_location),
         ] + self.default_args
-        ret = exec_command(args)
-        check_command_return(
-            ret, f"Failed to get SDK environment for version {version}"
-        )
-        data = json.loads(ret["out"])["data"]
+        ret = exec_command(args, f"Failed to get SDK environment for version {version}")
+        data = json.loads(ret.stdout)["data"]
         return {e["key"]: e["value"] for e in data["env_variables"]}
 
     def create_dfu_package(self, input: Path, output: Path):

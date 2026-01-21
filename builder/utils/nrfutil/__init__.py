@@ -1,17 +1,13 @@
 from urllib.parse import urljoin
-import platform
-import sys
-import urllib.request
 from pathlib import Path
-from platformio.proc import exec_command
 import os
 import shutil
 import json
-from .util import check_command_return
 
-ROOT_DIR = Path(__file__).parent.parent.resolve()
-DOWNLOAD_LOCATION = ROOT_DIR / "downloads"
-INSTALL_LOCATION = ROOT_DIR / "installed"
+from .utils import exec_command, get_platorm_slug, download_file
+from .nrfutil import NrfUtil
+
+
 BASE_NORDIC_URL = "https://files.nordicsemi.com/artifactory/swtools/external/nrfutil/"
 PACKAGES_BASE_URL = urljoin(BASE_NORDIC_URL, "packages/")
 EXECUTABLE = {
@@ -26,49 +22,7 @@ PACKAGE = {
     "filename": "nrfutil-{platform_slug}-{version}.tar.gz",
 }
 SUBCOMMANDS = {"sdk-manager": {}, "nrf5sdk-tools": {}}
-
-
-def get_platorm_slug():
-    if platform.system().lower() == "windows":
-        if platform.machine() != "x86_64" and platform.machine() != "AMD64":
-            print(
-                f"Unsupported architecture: {platform.machine()} on Windows",
-                file=sys.stderr,
-            )
-            exit(1)
-        return "x86_64-pc-windows-msvc"
-    elif platform.system().lower() == "linux":
-        if platform.machine() == "x86_64":
-            return "x86_64-unknown-linux-gnu"
-        elif platform.machine() == "arm64" or platform.machine() == "aarch64":
-            return "aarch64-unknown-linux-gnu"
-        else:
-            print(
-                f"Unsupported architecture: {platform.machine()} on Linux",
-                file=sys.stderr,
-            )
-            exit(1)
-    elif platform.system().lower() == "darwin":
-        if platform.machine() == "x86_64":
-            return "x86_64-apple-darwin"
-        elif platform.machine() == "arm64":
-            return "aarch64-apple-darwin"
-        else:
-            print(
-                f"Unsupported architecture: {platform.machine()} on macOS",
-                file=sys.stderr,
-            )
-            exit(1)
-    else:
-        print(f"Unsupported operating system: {platform.system()}", file=sys.stderr)
-        exit(1)
-
-
-def download_file(url: str, destination: Path):
-    print(f"Downloading {url}...")
-    with urllib.request.urlopen(url) as response, open(destination, "wb") as out_file:
-        out_file.write(response.read())
-    print(f"Downloaded to {destination}")
+EXTENSION = ".exe" if os.name == "nt" else ""
 
 
 def download_components(executable, package, target_location: Path):
@@ -77,17 +31,16 @@ def download_components(executable, package, target_location: Path):
     package_filename = package["filename"].format(
         platform_slug=platform_slug, version=package["version"]
     )
-    extension = ".exe" if platform.system().lower() == "windows" else ""
     files = {
         "exe": (
-            target_location / f"nrfutil{extension}",
+            target_location / f"nrfutil{EXTENSION}",
             urljoin(
                 urljoin(executable["base_url"], platform_slug + "/"),
                 executable["filename"].format(
                     platform_slug=platform_slug,
                     version=executable["version"],
                     hash=executable["hash"],
-                    extension=extension,
+                    extension=EXTENSION,
                 ),
             ),
         ),
@@ -109,8 +62,7 @@ def download_components(executable, package, target_location: Path):
 
 
 def install_executable(exe, install_location):
-    extension = ".exe" if platform.system().lower() == "windows" else ""
-    target = install_location / f"nrfutil{extension}"
+    target = install_location / f"nrfutil{EXTENSION}"
     shutil.copy(exe, target)
     target.chmod(target.stat().st_mode | 0o111)  # Make executable
     return target
@@ -119,9 +71,12 @@ def install_executable(exe, install_location):
 def install_core_package(nrfutil, core_tarball, version):
     env = os.environ.copy()
     env["NRFUTIL_BOOTSTRAP_TARBALL_PATH"] = str(core_tarball)
-    ret = exec_command([nrfutil, "--version", "--json"], env=env)
-    check_command_return(ret, "Failed to install nrfutil core tarball")
-    ret = json.loads(ret["out"])["data"]
+    ret = exec_command(
+        [nrfutil, "--version", "--json"],
+        "Failed to get nrfutil version",
+        env=env,
+    )
+    ret = json.loads(ret.stdout)["data"]
     if ret["version"] != version:
         raise RuntimeError(
             f"nrfutil version mismatch: expected {version}, got {ret['version']}",
@@ -135,8 +90,10 @@ def install_subcommand(nrfutil, name, version=None):
         args.append("--force")
     else:
         install_name = name
-    ret = exec_command([nrfutil, "install", install_name] + args)
-    check_command_return(ret, f"Failed to install subcommand {name}")
+    exec_command(
+        [nrfutil, "install", install_name] + args,
+        f"Failed to install subcommand {name}",
+    )
 
 
 def install_nrfutil(downloaded, package, subcommands, install_location):
@@ -151,12 +108,11 @@ def install_nrfutil(downloaded, package, subcommands, install_location):
     return nrfutil
 
 
-def setup():
-    from .nrfutil import NrfUtil
-    extension = ".exe" if platform.system().lower() == "windows" else ""
-    if (INSTALL_LOCATION / f"nrfutil{extension}").exists():
-        return NrfUtil(INSTALL_LOCATION / f"nrfutil{extension}")
+def setup(download_dir: Path, install_dir: Path):
 
-    components = download_components(EXECUTABLE, PACKAGE, DOWNLOAD_LOCATION)
-    exe = install_nrfutil(components, PACKAGE, SUBCOMMANDS, INSTALL_LOCATION)
+    if (install_dir / f"nrfutil{EXTENSION}").exists():
+        return NrfUtil(install_dir / f"nrfutil{EXTENSION}")
+
+    components = download_components(EXECUTABLE, PACKAGE, download_dir)
+    exe = install_nrfutil(components, PACKAGE, SUBCOMMANDS, install_dir)
     return NrfUtil(exe)
