@@ -1,5 +1,5 @@
-from .utils.usb_vids import VIDS_PIDS
-from .utils import sdk as nrfutil_sdk
+from utils.usb_vids import VIDS_PIDS
+from utils import sdk as nrfutil_sdk
 
 import os
 from os.path import join

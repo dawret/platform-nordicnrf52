@@ -1,15 +1,6 @@
-import re
-import sys
 import textwrap
 from pathlib import Path
-from itertools import chain
-
-from ..utils import sdk as nrfutil_sdk
-from platformio.proc import exec_command, LineBufferedAsyncPipe
-from SCons.Script import ARGUMENTS, Builder
-
-Import("env")
-
+import subprocess
 
 class BuildEnvironment:
     def __init__(self, project_dir: Path, source_dir: Path, build_dir: Path, sdk):
@@ -23,12 +14,14 @@ class BuildEnvironment:
     def run(self, cmd: list[str], cwd=None, **kwargs):
         if not cwd:
             cwd = self.sdk.sdk_path
-        ret = exec_command(cmd, env=self.sdk.env, cwd=cwd, **kwargs)
-        if ret["returncode"] != 0:
+        ret = subprocess.run(
+            cmd, env=self.sdk.env, cwd=cwd, capture_output=True, text=True, **kwargs
+        )
+        if ret.returncode != 0:
             raise RuntimeError(
-                f"Command {' '.join(cmd)} failed:\n{ret['out']}\n{ret['err']}"
+                f"Command {' '.join(cmd)} failed:\n{ret.stdout}\n{ret.stderr}"
             )
-        return (ret["out"], ret["err"])
+        return (ret.stdout, ret.stderr)
 
     def _is_reconfigure_required(self, board):
         if self.sdk.fresh_install or self.reconfigure_required:
@@ -141,17 +134,6 @@ class BuildEnvironment:
         )
         self.reconfigure_required = True
 
-    def _build_stdout(self, line, context):
-        if line.strip():
-            if re.match(r"^\[\d+/\d+\]", line):
-                print(line.strip(), end="\r", flush=True)
-            else:
-                print(line.rstrip("\n"))
-
-    def _build_stderr(self, line, context):
-        if line.strip():
-            print(line, end="")
-
     def build(
         self,
         board: str,
@@ -168,7 +150,7 @@ class BuildEnvironment:
         west_cmd = [
             "west",
             "build",
-            "--sysbuild" if sysbuild else "--no-sysbuild",
+            "--sysbuild",
             (
                 "--pristine"
                 if pristine or self._is_reconfigure_required(board)
@@ -184,112 +166,10 @@ class BuildEnvironment:
         if verbose:
             print(" ".join(map(str, west_cmd)))
 
-        context = {
-            "warnings": [],
-            "reports": [],
-            "current": None,
-            "previous_line_ninja": False
-        }
-
         out, err = self.run(
             west_cmd,
-            stdout=LineBufferedAsyncPipe(lambda line: self._build_stdout(line, context) if verbose else None),
-            stderr=LineBufferedAsyncPipe(lambda line: self._build_stderr(line, context)),
         )
-        #if verbose:
-        #    print(out)
 
-
-def c_flags_from_env(env):
-    return env.get("BUILD_FLAGS", [])
-
-
-def link_flags_from_env(env):
-    return [x for x in env.get("BUILD_FLAGS", []) if x.startswith("-Wl,")]
-
-
-def source_files_from_env(env):
-    files = chain.from_iterable(env.get("PIOBUILDFILES"))
-    files = chain.from_iterable([f.sources for f in files])
-    files = [Path((f.srcnode().get_abspath())) for f in files]
-    files.sort()
-    return files
-
-
-def get_libraries_from_env(env, build_env):
-    ret = []
-    for dep in env.GetLibBuilders():
-        source_files = env.CollectBuildFiles(dep.build_dir, dep.src_dir, dep.src_filter)
-        source_files = [f.srcnode() for f in source_files]
-        ret.append(
-            {
-                "name": dep.name,
-                "include_dirs": [
-                    str(Path(d).relative_to(build_env.app_dir, walk_up=True))
-                    for d in dep.get_include_dirs()
-                ],
-                "build_flags": env.ProcessFlags(dep.build_flags),
-                "include_dir": str(
-                    Path(dep.include_dir).relative_to(build_env.app_dir, walk_up=True)
-                ),
-                "sources": [
-                    str(
-                        Path(s.get_abspath()).relative_to(
-                            build_env.app_dir, walk_up=True
-                        )
-                    )
-                    for s in source_files
-                ],
-                "dependencies": (
-                    [d["name"] for d in dep.dependencies] if dep.dependencies else []
-                ),
-            }
-        )
-        # print(dep.build_flags)
-
-    return ret
-
-
-def west_build(build_env: BuildEnvironment, target, sources, env):
-    # lib_test(env, build_env)
-    # print("\n".join([f"{k}: {v}" for k, v in env.items()]))
-    pristine = env.GetProjectOption("pristine", "False").lower() == "true"
-    sysbuild = env.GetProjectOption("sysbuild", "True").lower() == "true"
-    board = env.BoardConfig()
-
-    build_env.build(
-        board=board.get("build.zephyr.variant", board.id),
-        build_flags=c_flags_from_env(env),
-        link_flags=link_flags_from_env(env),
-        libraries=get_libraries_from_env(env, build_env),
-        source_files=sources,
-        sysbuild=sysbuild,
-        pristine=pristine,
-        verbose=int(ARGUMENTS.get("PIOVERBOSE", 0)) > 0,
-    )
-
-    return None
-
-
-def setup_build(build_env):
-    env["BUILDERS"]["WestBuilder"] = Builder(
-        action=lambda target, source, env: west_build(
-            build_env, target, source_files_from_env(env), env
-        ),
-    )
-
-
-platform = env.PioPlatform()
-print("Running nrfutil SDK setup...")
-sys.path.append(platform.get_package_dir("framework-zephyr"))
-import builder.utils.sdk as sdk
-
-nrf_sdk = sdk.install_sdk(env)
-
-build_env = BuildEnvironment(
-    project_dir=Path(env.subst("$PROJECT_DIR")),
-    source_dir=Path(env.subst("$PROJECT_SRC_DIR")),
-    build_dir=Path(env.subst("$BUILD_DIR")),
-    sdk=nrf_sdk,
-)
-setup_build(build_env)
+        if verbose:
+            print(out)
+            print(err)

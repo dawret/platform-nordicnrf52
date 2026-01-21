@@ -12,12 +12,11 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import sys
+from itertools import chain
 from os.path import join, isfile
 from pathlib import Path
-
-from .utils import nrfutil
-
-import upload
+import semantic_version as semver
 
 from SCons.Script import (
     AlwaysBuild,
@@ -25,6 +24,15 @@ from SCons.Script import (
     Default,
     DefaultEnvironment,
 )
+
+env = DefaultEnvironment()
+platform = env.PioPlatform()
+board = env.BoardConfig()
+
+from utils import nrfutil
+from frameworks import zephyr
+import upload
+
 
 def get_zephyr_config(env, name):
     config_path = join(env.subst("$BUILD_DIR"), "zephyr", "zephyr", ".config")
@@ -36,14 +44,104 @@ def get_zephyr_config(env, name):
     return None
 
 
-env = DefaultEnvironment()
-platform = env.PioPlatform()
-board = env.BoardConfig()
-nrfutil = nrfutil_sdk.get_nrfutil(env)
+ROOT_DIR = Path(platform.get_dir())
+SDK_INSTALL_DIR = ROOT_DIR / "nrf-sdk"
+SDK_DOWNLOAD_DIR = ROOT_DIR / "nrf-sdk/downloads"
+SDK_DEFAULT_VERSION = "v2.9.2"
+
+try:
+    # Try to get SDK version from project options first
+    SDK_VERSION = "v" + str(
+        semver.Version(
+            env.GetProjectOption("custom_framework_version", None)
+        ).truncate()
+    )
+except:
+    # Fall back to the default version
+    SDK_VERSION = SDK_DEFAULT_VERSION
+
+nrfutil_exe = nrfutil.setup(SDK_DOWNLOAD_DIR, SDK_INSTALL_DIR)
+nrfutil_sdk = nrfutil_exe.get_sdk(SDK_VERSION, SDK_INSTALL_DIR)
+if not nrfutil_sdk:
+    print(f"Installing SDK version {SDK_VERSION}...")
+    nrfutil_sdk = nrfutil_exe.install_sdk(SDK_VERSION, SDK_INSTALL_DIR)
 
 # Zephyr's final output file is merged.hex
 env.Replace(PROGSUFFIX=".hex")
 env.Replace(PROGNAME="merged")
+
+
+def build_action(target, source, env):
+    def source_files_from_env(env):
+        files = chain.from_iterable(env.get("PIOBUILDFILES"))
+        files = chain.from_iterable([f.sources for f in files])
+        files = [Path((f.srcnode().get_abspath())) for f in files]
+        files.sort()
+        return files
+
+    def libraries_from_env(env, build_env):
+        ret = []
+        for dep in env.GetLibBuilders():
+            source_files = env.CollectBuildFiles(
+                dep.build_dir, dep.src_dir, dep.src_filter
+            )
+            source_files = [f.srcnode() for f in source_files]
+            ret.append(
+                {
+                    "name": dep.name,
+                    "include_dirs": [
+                        str(Path(d).relative_to(build_env.app_dir, walk_up=True))
+                        for d in dep.get_include_dirs()
+                    ],
+                    "build_flags": env.ProcessFlags(dep.build_flags),
+                    "include_dir": str(
+                        Path(dep.include_dir).relative_to(
+                            build_env.app_dir, walk_up=True
+                        )
+                    ),
+                    "sources": [
+                        str(
+                            Path(s.get_abspath()).relative_to(
+                                build_env.app_dir, walk_up=True
+                            )
+                        )
+                        for s in source_files
+                    ],
+                    "dependencies": (
+                        [d["name"] for d in dep.dependencies]
+                        if dep.dependencies
+                        else []
+                    ),
+                }
+            )
+        return ret
+
+    cflags = env.get("BUILD_FLAGS", [])
+    linkflags = [x for x in env.get("BUILD_FLAGS", []) if x.startswith("-Wl,")]
+    build_env = zephyr.BuildEnvironment(
+        project_dir=Path(env.subst("$PROJECT_DIR")),
+        source_dir=Path(env.subst("$PROJECT_SRC_DIR")),
+        build_dir=Path(env.subst("$BUILD_DIR")),
+        sdk=nrfutil_sdk,
+    )
+    build_env.build(
+        board=board.get("build.zephyr.variant", board.id),
+        build_flags=cflags,
+        link_flags=linkflags,
+        libraries=libraries_from_env(env, build_env),
+        source_files=source_files_from_env(env),
+        pristine=env.GetProjectOption("pristine", "False").lower() == "true",
+        verbose=int(ARGUMENTS.get("PIOVERBOSE", 0)) > 0,
+    )
+
+
+env.Append(
+    BUILDERS=dict(
+        WestBuilder=Builder(
+            action=build_action,
+        )
+    )
+)
 
 env.Append(
     BUILDERS=dict(
@@ -77,7 +175,7 @@ env.Append(
 env.Append(
     BUILDERS=dict(
         PackageDfuNordic=Builder(
-            action=lambda target, source, env: nrfutil.create_dfu_package(
+            action=lambda target, source, env: nrfutil_exe.create_dfu_package(
                 Path(source[0].get_abspath()), Path(target[0].get_abspath())
             ),
             suffix=".zip",
@@ -89,7 +187,7 @@ env.Append(
 
 def build_uf2(target, source, env):
     family_id = get_zephyr_config(env, "CONFIG_BUILD_OUTPUT_UF2_FAMILY_ID")
-    uf2conv = nrfutil_sdk.get_uf2conv(env)
+    uf2conv = nrfutil_sdk.sdk_path / "zephyr" / "scripts" / "build" / "uf2conv.py"
     cmd = env.VerboseAction(
         " ".join(
             [
@@ -121,10 +219,10 @@ env.Append(
 env.ProcessProgramDeps()
 env.ProcessCompileDbToolchainOption()
 env.ProcessProjectDeps()
-env.Append(BUILDERS=dict(DummyBuilder=Builder(action=lambda *_: None)))
+# env.Append(BUILDERS=dict(DummyBuilder=Builder(action=lambda *_: None)))
 target_hex = env.WestBuilder(env.subst("$PROGPATH"), [])
-target_hexbuildprog = env.Alias("hexbuildprog", target_hex, target_hex)
-AlwaysBuild(target_hexbuildprog)
+# target_hexbuildprog = env.Alias("hexbuildprog", target_hex, target_hex)
+AlwaysBuild(target_hex)
 
 target_uf2 = env.PackageUf2(join("$BUILD_DIR", "${PROGNAME}"), target_hex)
 target_dfu_adafruit = env.PackageDfuAdafruit(
@@ -134,6 +232,8 @@ target_dfu_nordic = env.PackageDfuNordic(
     join("$BUILD_DIR", "${PROGNAME}_nordic"), target_hex
 )
 
-upload.setup_upload_targets(env, target_hex, target_uf2, target_dfu_adafruit, target_dfu_nordic)
+upload.setup_upload_targets(
+    env, target_hex, target_uf2, target_dfu_adafruit, target_dfu_nordic
+)
 
 Default(target_hex)
