@@ -71,8 +71,8 @@ env.Replace(PROGSUFFIX=".hex")
 env.Replace(PROGNAME="merged")
 
 
-# Gather source files
 def source_files_from_env(env):
+    " Gather source files from PIOBUILDFILES"
     "Gather source files from the environment"
     files = chain.from_iterable(env.get("PIOBUILDFILES"))
     files = chain.from_iterable([f.sources for f in files])
@@ -105,8 +105,9 @@ def dependencies_from_env(env):
     return ret
 
 
-# Main build action
 def build_action(target, source, env):
+    " Main build action "
+    # Those three calls populate the environment with build files, flags and dependencies
     env.ProcessProgramDeps()
     env.ProcessCompileDbToolchainOption()
     env.ProcessProjectDeps()
