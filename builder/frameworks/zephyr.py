@@ -112,6 +112,7 @@ class BuildEnvironment:
             """
         )
         cmake_tpl += "\n".join([d.to_zephyr_cmake(self) for d in dependencies])
+        dependencies = [d for d in dependencies if not d.is_header_only]
         cmake_tpl += textwrap.dedent(
             f"""
 
@@ -120,7 +121,7 @@ class BuildEnvironment:
             zephyr_ld_options({' '.join(link_flags)})
 
             target_sources(app PRIVATE {" ".join(sources)})
-            target_link_libraries(app PRIVATE {" ".join([d.name for d in dependencies if not d.is_header_only])})
+            target_link_libraries(app PRIVATE {" ".join(dependencies)})
             target_include_directories(app PRIVATE ../src)
             """
         )

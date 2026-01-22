@@ -71,9 +71,8 @@ env.Replace(PROGSUFFIX=".hex")
 env.Replace(PROGNAME="merged")
 
 
-# Gather source files
 def source_files_from_env(env):
-    "Gather source files from the environment"
+    "Gather source files from PIOBUILDFILES"
     files = chain.from_iterable(env.get("PIOBUILDFILES"))
     files = chain.from_iterable([f.sources for f in files])
     files = [Path((f.srcnode().get_abspath())) for f in files]
@@ -105,8 +104,9 @@ def dependencies_from_env(env):
     return ret
 
 
-# Main build action
 def build_action(target, source, env):
+    " Main build action "
+    # Those three calls populate the environment with build files, flags and dependencies
     env.ProcessProgramDeps()
     env.ProcessCompileDbToolchainOption()
     env.ProcessProjectDeps()
@@ -127,7 +127,7 @@ def build_action(target, source, env):
         link_flags=linkflags,
         dependencies=dependencies_from_env(env),
         source_files=source_files_from_env(env),
-        pristine=env.GetProjectOption("pristine", "False").lower() == "true",
+        pristine=env.GetProjectOption("custom_pristine", "False").lower() == "true",
         verbose=int(ARGUMENTS.get("PIOVERBOSE", 0)) > 0,
     )
 
@@ -212,6 +212,8 @@ env.Append(
     )
 )
 
+### Build targets
+
 target_hex = env.WestBuilder(env.subst("$PROGPATH"), [])
 AlwaysBuild(target_hex)
 
@@ -222,6 +224,8 @@ target_dfu_adafruit = env.PackageDfuAdafruit(
 target_dfu_nordic = env.PackageDfuNordic(
     join("$BUILD_DIR", "${PROGNAME}_nordic"), target_hex
 )
+
+### Upload targets
 
 env.AddPlatformTarget(
     "flash_west",
