@@ -1,6 +1,48 @@
+from dataclasses import dataclass
 import textwrap
 from pathlib import Path
 from utils.utils import exec_command
+from itertools import chain
+
+
+@dataclass
+class ZephyrDependency:
+    name: str
+    public_include_dirs: list[str]
+    private_include_dirs: list[str]
+    build_flags: list[str]
+    sources: list[str]
+    dependencies: list[str]
+
+    @property
+    def is_header_only(self):
+        return len(self.sources) == 0
+
+    def include_dirs(self, build_env):
+        dirs = self.public_include_dirs
+        if not dirs:
+            dirs = self.private_include_dirs
+        return [str(Path(d).relative_to(build_env.app_dir, walk_up=True)) for d in dirs]
+
+    def to_zephyr_cmake(self, build_env):
+        if self.is_header_only:
+            return ""
+        ret = f"zephyr_library_named({self.name})"
+        sources = [
+            str(Path(s).relative_to(build_env.app_dir, walk_up=True))
+            for s in self.sources
+        ]
+        ret += f"\nzephyr_library_sources({' '.join(sources)})"
+        private_include_dirs = [
+            str(Path(d).relative_to(build_env.app_dir, walk_up=True))
+            for d in self.private_include_dirs
+        ]
+        ret += f"\nzephyr_library_include_directories({' '.join(private_include_dirs)})"
+        if self.build_flags:
+            ret += f"\nzephyr_library_compile_options({' '.join(self.build_flags)})"
+        for d in self.dependencies:
+            ret += f"\nzephyr_library_link_libraries({d})"
+        return ret
 
 
 class BuildEnvironment:
@@ -45,32 +87,17 @@ class BuildEnvironment:
             return True
         return False
 
-    def _generate_cmake_library_entries(self, libraries):
-        include_dirs = set()
-        libs = []
-        for l in libraries:
-            lib = f"zephyr_library_named({l['name']})"
-            lib += f"\nzephyr_library_sources({' '.join(l['sources'])})"
-            lib += (
-                f"\nzephyr_library_include_directories({' '.join(l['include_dirs'])})"
-            )
-            include_dirs.update(l["include_dirs"])
-            if l["build_flags"]:
-                lib += f"\nzephyr_library_compile_options({' '.join(l['build_flags'])})"
-            for d in l.get("dependencies", []):
-                lib += f"\nzephyr_library_link_libraries({d})"
-            libs.append(lib)
-        return libs, include_dirs
-
     def _generate_project_files(
         self,
         build_flags: list[str],
         link_flags: list[str],
-        dependencies: list[dict],
+        dependencies: list[ZephyrDependency],
         source_files: list[Path],
     ):
-        deps, deps_include_dirs = self._generate_cmake_library_entries(dependencies)
         sources = [str(f.relative_to(self.app_dir, walk_up=True)) for f in source_files]
+        dep_include_dirs = set(
+            chain.from_iterable(d.include_dirs(self) for d in dependencies)
+        )
         self.app_dir.mkdir(parents=True, exist_ok=True)
         cmake_file = self.app_dir / "CMakeLists.txt"
         cmake_tpl = textwrap.dedent(
@@ -82,15 +109,18 @@ class BuildEnvironment:
             find_package(Zephyr)
 
             project({self.project_dir.name})
-
-            {'\n'.join(deps)}
+            """
+        )
+        cmake_tpl += "\n".join([d.to_zephyr_cmake(self) for d in dependencies])
+        cmake_tpl += textwrap.dedent(
+            f"""
 
             zephyr_compile_options($<$<COMPILE_LANGUAGE:CXX>:{' '.join(build_flags)}>)
-            zephyr_include_directories({' '.join(deps_include_dirs)})
+            zephyr_include_directories({' '.join(dep_include_dirs)})
             zephyr_ld_options({' '.join(link_flags)})
 
             target_sources(app PRIVATE {" ".join(sources)})
-            target_link_libraries(app PRIVATE {" ".join([d['name'] for d in dependencies])})
+            target_link_libraries(app PRIVATE {" ".join([d.name for d in dependencies if not d.is_header_only])})
             target_include_directories(app PRIVATE ../src)
             """
         )
@@ -136,12 +166,14 @@ class BuildEnvironment:
         board: str,
         build_flags: list[str],
         link_flags: list[str],
-        dependencies: list[dict],
+        dependencies: list[ZephyrDependency],
         source_files: list[Path],
         pristine: bool = False,
         verbose: bool = False,
     ):
-        self._generate_project_files(build_flags, link_flags, dependencies, source_files)
+        self._generate_project_files(
+            build_flags, link_flags, dependencies, source_files
+        )
 
         west_cmd = [
             "west",

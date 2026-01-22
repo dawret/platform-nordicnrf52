@@ -70,9 +70,10 @@ uf2conv = nrfutil_sdk.sdk_path / "zephyr" / "scripts" / "build" / "uf2conv.py"
 env.Replace(PROGSUFFIX=".hex")
 env.Replace(PROGNAME="merged")
 
+
 # Gather source files
 def source_files_from_env(env):
-    " Gather source files from the environment "
+    "Gather source files from the environment"
     files = chain.from_iterable(env.get("PIOBUILDFILES"))
     files = chain.from_iterable([f.sources for f in files])
     files = [Path((f.srcnode().get_abspath())) for f in files]
@@ -80,43 +81,29 @@ def source_files_from_env(env):
     return files
 
 
-def dependencies_from_env(env, build_env):
-    " Gather dependencies from the environment "
+def dependencies_from_env(env):
+    "Gather dependencies from the environment"
     ret = []
     for dep in env.GetLibBuilders():
-        source_files = env.CollectBuildFiles(
-            dep.build_dir, dep.src_dir, dep.src_filter
-        )
-        source_files = [f.srcnode() for f in source_files]
         ret.append(
-            {
-                "name": dep.name,
-                "include_dirs": [
-                    str(Path(d).relative_to(build_env.app_dir, walk_up=True))
-                    for d in dep.get_include_dirs()
-                ],
-                "build_flags": env.ProcessFlags(dep.build_flags),
-                "include_dir": str(
-                    Path(dep.include_dir).relative_to(
-                        build_env.app_dir, walk_up=True
+            zephyr.ZephyrDependency(
+                name=dep.name,
+                public_include_dirs=dep.get_include_dirs(),
+                private_include_dirs=[dep.include_dir] if dep.include_dir else [],
+                sources=[
+                    str(f.srcnode().get_abspath())
+                    for f in env.CollectBuildFiles(
+                        dep.build_dir, dep.src_dir, dep.src_filter
                     )
-                ),
-                "sources": [
-                    str(
-                        Path(s.get_abspath()).relative_to(
-                            build_env.app_dir, walk_up=True
-                        )
-                    )
-                    for s in source_files
                 ],
-                "dependencies": (
-                    [d["name"] for d in dep.dependencies]
-                    if dep.dependencies
-                    else []
+                build_flags=env.ProcessFlags(dep.build_flags),
+                dependencies=(
+                    [d["name"] for d in dep.dependencies] if dep.dependencies else []
                 ),
-            }
+            )
         )
     return ret
+
 
 # Main build action
 def build_action(target, source, env):
@@ -138,7 +125,7 @@ def build_action(target, source, env):
         board=board.get("build.zephyr.variant", board.id),
         build_flags=cflags,
         link_flags=linkflags,
-        dependencies=dependencies_from_env(env, build_env),
+        dependencies=dependencies_from_env(env),
         source_files=source_files_from_env(env),
         pristine=env.GetProjectOption("pristine", "False").lower() == "true",
         verbose=int(ARGUMENTS.get("PIOVERBOSE", 0)) > 0,
