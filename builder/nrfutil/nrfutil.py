@@ -1,8 +1,8 @@
-from .utils import exec_command
 from pathlib import Path
 import json
 import shutil
 
+from utils.utils import exec_command
 
 class NrfUtilSdk:
     def __init__(

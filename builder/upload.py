@@ -1,5 +1,4 @@
 from utils.usb_vids import VIDS_PIDS
-from utils import sdk as nrfutil_sdk
 
 import os
 from os.path import join
@@ -72,12 +71,11 @@ def reset_to_bootloader(target, source, env):  # pylint: disable=W0613,W0621
         time.sleep(0.5)
 
 
-def upload_swd(runner=None):
+def upload_swd(sdk_env, runner=None):
     jlink_dir = platform.get_package_dir("tool-jlink")
 
     def upload_action(target, source, env):
-        sdk = nrfutil_sdk.get_sdk(env)
-        west_env = sdk.env.copy()
+        west_env = sdk_env.copy()
         west_env["PATH"] = f"{jlink_dir}{os.pathsep}{west_env.get('PATH','')}"
         west_env["LD_LIBRARY_PATH"] = (
             f"{jlink_dir}{os.pathsep}{west_env.get('LD_LIBRARY_PATH','')}"
@@ -100,9 +98,8 @@ def upload_swd(runner=None):
     return [upload_action]
 
 
-def upload_uf2_adafruit():
+def upload_uf2_adafruit(uf2conv):
     def upload_action(target, source, env):
-        uf2conv = nrfutil_sdk.get_uf2conv(env)
         env.Replace(
             UPLOADER=str(uf2conv),
             UPLOADERFLAGS=["-D", "-d", "$UPLOAD_PORT"],
@@ -144,9 +141,9 @@ def upload_serial_adafruit():
     ]
 
 
-def upload_serial_nordic():
+def upload_serial_nordic(nrfutil_exe):
     def upload_nordic(target, source, env):
-        nrfutil_sdk.get_nrfutil(env).flash_dfu_package(
+        nrfutil_exe.flash_dfu_package(
             env.subst("$UPLOAD_PORT"),
             env.subst("$UPLOAD_SPEED") or "115200",
             Path(str(source[0])),
@@ -156,35 +153,3 @@ def upload_serial_nordic():
         env.Action(reset_to_bootloader),
         env.VerboseAction(upload_nordic, "Uploading $SOURCE (serial_nordic)"),
     ]
-
-
-def setup_upload_targets(
-    env, target_hex, target_uf2, target_dfu_adafruit, target_dfu_nordic
-):
-    env.AddPlatformTarget(
-        "flash_west", target_hex, upload_swd(), "Flash using West's default runner"
-    )
-    env.AddPlatformTarget(
-        "flash_pyocd", target_hex, upload_swd("pyocd"), "Flash using pyOCD"
-    )
-    env.AddPlatformTarget(
-        "flash_jlink", target_hex, upload_swd("jlink"), "Flash using J-Link"
-    )
-    env.AddPlatformTarget(
-        "flash_uf2", target_uf2, upload_uf2_adafruit(), "Flash using UF2"
-    )
-    env.AddPlatformTarget(
-        "flash_serial_adafruit",
-        target_dfu_adafruit,
-        upload_serial_adafruit(),
-        "Flash using Adafruit uf2 bootloader (serial)",
-    )
-    env.AddPlatformTarget(
-        "flash_serial_nordic",
-        target_dfu_nordic,
-        upload_serial_nordic(),
-        "Flash using Nordic bootloader (serial)",
-    )
-
-    # For compatibility
-    env.Alias("upload", "flash_serial_adafruit")

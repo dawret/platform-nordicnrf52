@@ -14,10 +14,6 @@ def exec_command(cmd, msg, **kwargs):
         raise RuntimeError(f"{msg}:\nstdout: {result.stdout}\nstderr: {result.stderr}")
     return result
 
-def check_command_return(ret, msg):
-    if ret["returncode"] != 0:
-        raise RuntimeError(f"{msg}:\nstdout: {ret['out']}\nstderr: {ret['err']}")
-
 
 def get_platorm_slug():
     if platform.system().lower() == "windows":

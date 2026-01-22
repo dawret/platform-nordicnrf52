@@ -4,7 +4,7 @@ import os
 import shutil
 import json
 
-from .utils import exec_command, get_platorm_slug, download_file
+from utils.utils import exec_command, get_platorm_slug, download_file
 from .nrfutil import NrfUtil
 
 

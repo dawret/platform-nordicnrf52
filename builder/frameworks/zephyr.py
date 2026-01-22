@@ -1,6 +1,7 @@
 import textwrap
 from pathlib import Path
-import subprocess
+from utils.utils import exec_command
+
 
 class BuildEnvironment:
     def __init__(self, project_dir: Path, source_dir: Path, build_dir: Path, sdk):
@@ -14,13 +15,9 @@ class BuildEnvironment:
     def run(self, cmd: list[str], cwd=None, **kwargs):
         if not cwd:
             cwd = self.sdk.sdk_path
-        ret = subprocess.run(
-            cmd, env=self.sdk.env, cwd=cwd, capture_output=True, text=True, **kwargs
+        ret = exec_command(
+            cmd, f"Command {' '.join(cmd)} failed", env=self.sdk.env, cwd=cwd, **kwargs
         )
-        if ret.returncode != 0:
-            raise RuntimeError(
-                f"Command {' '.join(cmd)} failed:\n{ret.stdout}\n{ret.stderr}"
-            )
         return (ret.stdout, ret.stderr)
 
     def _is_reconfigure_required(self, board):
@@ -69,10 +66,10 @@ class BuildEnvironment:
         self,
         build_flags: list[str],
         link_flags: list[str],
-        libraries: list[dict],
+        dependencies: list[dict],
         source_files: list[Path],
     ):
-        libs, include_dirs = self._generate_cmake_library_entries(libraries)
+        deps, deps_include_dirs = self._generate_cmake_library_entries(dependencies)
         sources = [str(f.relative_to(self.app_dir, walk_up=True)) for f in source_files]
         self.app_dir.mkdir(parents=True, exist_ok=True)
         cmake_file = self.app_dir / "CMakeLists.txt"
@@ -86,14 +83,14 @@ class BuildEnvironment:
 
             project({self.project_dir.name})
 
-            {'\n'.join(libs)}
+            {'\n'.join(deps)}
 
             zephyr_compile_options($<$<COMPILE_LANGUAGE:CXX>:{' '.join(build_flags)}>)
-            zephyr_include_directories({' '.join(include_dirs)})
+            zephyr_include_directories({' '.join(deps_include_dirs)})
             zephyr_ld_options({' '.join(link_flags)})
 
             target_sources(app PRIVATE {" ".join(sources)})
-            target_link_libraries(app PRIVATE {" ".join([l['name'] for l in libraries])})
+            target_link_libraries(app PRIVATE {" ".join([d['name'] for d in dependencies])})
             target_include_directories(app PRIVATE ../src)
             """
         )
@@ -139,13 +136,12 @@ class BuildEnvironment:
         board: str,
         build_flags: list[str],
         link_flags: list[str],
-        libraries: list[dict],
+        dependencies: list[dict],
         source_files: list[Path],
-        sysbuild: bool = True,
         pristine: bool = False,
         verbose: bool = False,
     ):
-        self._generate_project_files(build_flags, link_flags, libraries, source_files)
+        self._generate_project_files(build_flags, link_flags, dependencies, source_files)
 
         west_cmd = [
             "west",
