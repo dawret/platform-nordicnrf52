@@ -11,7 +11,7 @@ EXTENSION = "7z" if os.name == "nt" else "tar.xz"
 SDK_BASE_URL = "https://github.com/zephyrproject-rtos/sdk-ng/releases/download/v{version}/"
 SDK_FILE_NAME = f"zephyr-sdk-{{version}}_{get_platform_string()}_minimal.{EXTENSION}"
 PYTHON_VERSION = "3.12"
-PYTHON_SETUP_MODULES = ["west", "py7zr"]
+PYTHON_SETUP_MODULES = ["west", "py7zr", "cmake"]
 PYTHON_BUILD_MODULES = ["west", "ninja", "cmake", "pyocd"]
 NRF_SDK_URL = "https://github.com/nrfconnect/sdk-nrf"
 NRF_DISABLED_MODULES = [
