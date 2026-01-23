@@ -37,11 +37,6 @@
       "optional": false,
       "version": "~1.503.0"
     },
-    "tool-nordic-nrfutil": {
-      "owner": "dawret",
-      "optional": false,
-      "version": "https://github.com/dawret/nordic-nrfutil/archive/refs/tags/v0.2.2.tar.gz"
-    },
     "tool-jlink": {
       "type": "uploader",
       "optional": false,
