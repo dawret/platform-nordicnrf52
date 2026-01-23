@@ -11,11 +11,31 @@ def exec_command(cmd, msg, **kwargs):
         **kwargs,
     )
     if result.returncode != 0:
-        raise RuntimeError(f"{msg}:\nstdout: {result.stdout}\nstderr: {result.stderr}")
+        raise RuntimeError(f"{msg}:\ncmd: {cmd}\nstdout: {result.stdout}\nstderr: {result.stderr}")
     return result
 
+def get_platform_string():
+    os_map = {
+        'linux': 'linux',
+        'darwin': 'macos',
+        'windows': 'windows',
+    }
 
-def get_platorm_slug():
+    arch_map = {
+        'x86_64': 'x86_64',
+        'amd64': 'x86_64',
+        'aarch64': 'aarch64',
+        'arm64': 'aarch64',
+    }
+    system = platform.system().lower()
+    machine = platform.machine().lower()
+
+    os_name = os_map.get(system, system)
+    arch_name = arch_map.get(machine, machine)
+
+    return f"{os_name}-{arch_name}"
+
+def get_platform_slug():
     if platform.system().lower() == "windows":
         if platform.machine() != "x86_64" and platform.machine() != "AMD64":
             raise RuntimeError(

@@ -5,7 +5,7 @@ import shutil
 import json
 
 from utils.utils import exec_command, get_platorm_slug, download_file
-from .nrfutil import NrfUtil
+from .nrfutil import NrfUtil, NrfUtilSdk
 
 
 BASE_NORDIC_URL = "https://files.nordicsemi.com/artifactory/swtools/external/nrfutil/"
@@ -116,3 +116,52 @@ def setup(download_dir: Path, install_dir: Path):
     components = download_components(EXECUTABLE, PACKAGE, download_dir)
     exe = install_nrfutil(components, PACKAGE, SUBCOMMANDS, install_dir)
     return NrfUtil(exe)
+
+
+def get_fake_sdk():
+    toolchain_path = Path("/var/home/dawret/src/fake_ncs")
+    new_path = [
+        toolchain_path / "usr" / "local" / "bin",
+        toolchain_path / "opt" / "zephyr_sdk" / "arm-zephyr-eabi" / "bin",
+        toolchain_path / "opt" / "zephyr_sdk" / "riscv64-zephyr-eabi" / "bin",
+    ]
+    new_path.extend(os.getenv("PATH", "").split(os.pathsep))
+    new_ld_library_path = [
+        toolchain_path / "usr" / "local" / "lib",
+    ]
+    new_ld_library_path.extend(os.getenv("LD_LIBRARY_PATH", "").split(os.pathsep))
+    env = {
+        "PATH": os.pathsep.join([str(p) for p in new_path]),
+        "LD_LIBRARY_PATH": os.pathsep.join([str(p) for p in new_ld_library_path]),
+        "PYTHONHOME": "",#str(toolchain_path / "usr" / "local"),
+        "PYTHONPATH": "",
+        "ZEPHYR_SDK_INSTALL_DIR": str(toolchain_path / "opt" / "zephyr_sdk"),
+        "ZEPHYR_TOOLCHAIN_VARIANT": "zephyr",
+        "VIRTUALENV": str(toolchain_path / "usr" / "local"),
+    }
+    print(env)
+    return NrfUtilSdk(
+        nrfutil=None,
+        version="v2.9.2",
+        install_location=Path("/var/home/dawret/src/fake_ncs"),
+        env=env,
+        sdk_path="/var/home/dawret/src/fake_ncs/v2.9.2",
+        toolchain_path=Path("/var/home/dawret/src/fake_ncs"),
+        fresh_install=False,
+    )
+
+"""
+os.pathsep.join(
+            [
+                str(toolchain_path / "usr" / "local" / "lib" / "python3.12"),
+                str(
+                    toolchain_path
+                    / "usr"
+                    / "local"
+                    / "lib"
+                    / "python3.12"
+                    / "site-packages"
+                ),
+            ]
+        ),
+"""

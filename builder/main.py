@@ -28,7 +28,7 @@ env = DefaultEnvironment()
 platform = env.PioPlatform()
 board = env.BoardConfig()
 
-import nrfutil
+import setup
 from frameworks import zephyr
 import upload
 
@@ -59,12 +59,18 @@ except:
     # Fall back to the default version
     SDK_VERSION = SDK_DEFAULT_VERSION
 
-nrfutil_exe = nrfutil.setup(SDK_DOWNLOAD_DIR, SDK_INSTALL_DIR)
-nrfutil_sdk = nrfutil_exe.get_sdk(SDK_VERSION, SDK_INSTALL_DIR)
-if not nrfutil_sdk:
-    print(f"Installing SDK version {SDK_VERSION}...")
-    nrfutil_sdk = nrfutil_exe.install_sdk(SDK_VERSION, SDK_INSTALL_DIR)
-uf2conv = nrfutil_sdk.sdk_path / "zephyr" / "scripts" / "build" / "uf2conv.py"
+build_env = setup.BuildEnv(
+    base_dir=ROOT_DIR / "nrf-sdk",
+    platform_dir=ROOT_DIR,
+    sdk_version=SDK_VERSION,
+)
+build_env = setup.setup("0.17.0", SDK_VERSION, build_env, SDK_DOWNLOAD_DIR)
+# nrfutil_exe = None # nrfutil.setup(SDK_DOWNLOAD_DIR, SDK_INSTALL_DIR)
+# nrfutil_sdk = nrfutil.get_fake_sdk() #nrfutil_exe.get_sdk(SDK_VERSION, SDK_INSTALL_DIR)
+# if not nrfutil_sdk:
+#    print(f"Installing SDK version {SDK_VERSION}...")
+#    nrfutil_sdk = nrfutil_exe.install_sdk(SDK_VERSION, SDK_INSTALL_DIR)
+uf2conv = build_env.zephyr_dir / "scripts" / "build" / "uf2conv.py"
 
 # Zephyr's final output file is merged.hex
 env.Replace(PROGSUFFIX=".hex")
@@ -105,7 +111,7 @@ def dependencies_from_env(env):
 
 
 def build_action(target, source, env):
-    " Main build action "
+    "Main build action"
     # Those three calls populate the environment with build files, flags and dependencies
     env.ProcessProgramDeps()
     env.ProcessCompileDbToolchainOption()
@@ -114,14 +120,14 @@ def build_action(target, source, env):
     cflags = env.get("BUILD_FLAGS", [])
     linkflags = [x for x in env.get("BUILD_FLAGS", []) if x.startswith("-Wl,")]
 
-    build_env = zephyr.BuildEnvironment(
+    zephyr_env = zephyr.ZephyrEnvironment(
         project_dir=Path(env.subst("$PROJECT_DIR")),
         source_dir=Path(env.subst("$PROJECT_SRC_DIR")),
         build_dir=Path(env.subst("$BUILD_DIR")),
-        sdk=nrfutil_sdk,
+        build_env=build_env,
     )
 
-    build_env.build(
+    zephyr_env.build(
         board=board.get("build.zephyr.variant", board.id),
         build_flags=cflags,
         link_flags=linkflags,
@@ -230,19 +236,19 @@ target_dfu_nordic = env.PackageDfuNordic(
 env.AddPlatformTarget(
     "flash_west",
     target_hex,
-    upload.upload_swd(nrfutil_sdk.env),
+    upload.upload_swd(build_env.env),
     "Flash using West's default runner",
 )
 env.AddPlatformTarget(
     "flash_pyocd",
     target_hex,
-    upload.upload_swd(nrfutil_sdk.env, "pyocd"),
+    upload.upload_swd(build_env.env, "pyocd"),
     "Flash using pyOCD",
 )
 env.AddPlatformTarget(
     "flash_jlink",
     target_hex,
-    upload.upload_swd(nrfutil_sdk.env, "jlink"),
+    upload.upload_swd(build_env.env, "jlink"),
     "Flash using J-Link",
 )
 env.AddPlatformTarget(
@@ -257,7 +263,7 @@ env.AddPlatformTarget(
 env.AddPlatformTarget(
     "flash_serial_nordic",
     target_dfu_nordic,
-    upload.upload_serial_nordic(nrfutil_exe),
+    upload.upload_serial_nordic(build_env.env),
     "Flash using Nordic bootloader (serial)",
 )
 

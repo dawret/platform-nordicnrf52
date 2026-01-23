@@ -2,6 +2,7 @@ from dataclasses import dataclass
 import textwrap
 from pathlib import Path
 from utils.utils import exec_command
+from build_env import BuildEnv
 from itertools import chain
 
 
@@ -45,25 +46,30 @@ class ZephyrDependency:
         return ret
 
 
-class BuildEnvironment:
-    def __init__(self, project_dir: Path, source_dir: Path, build_dir: Path, sdk):
+class ZephyrEnvironment:
+    def __init__(
+        self, project_dir: Path, source_dir: Path, build_dir: Path, build_env: BuildEnv
+    ):
         self.project_dir = project_dir
         self.source_dir = source_dir
         self.build_dir = build_dir
         self.app_dir = project_dir / "zephyr"
-        self.sdk = sdk
+        self.build_env = build_env
         self.reconfigure_required = False
 
     def run(self, cmd: list[str], cwd=None, **kwargs):
         if not cwd:
-            cwd = self.sdk.sdk_path
-        ret = exec_command(
-            cmd, f"Command {' '.join(cmd)} failed", env=self.sdk.env, cwd=cwd, **kwargs
+            cwd = self.build_env.sdk_dir
+        ret = self.build_env.run(
+            cmd,
+            f"West command failed",
+            cwd=cwd,
+            **kwargs,
         )
         return (ret.stdout, ret.stderr)
 
     def _is_reconfigure_required(self, board):
-        if self.sdk.fresh_install or self.reconfigure_required:
+        if self.build_env.fresh_install or self.reconfigure_required:
             return True
         cmake_cache_file = self.build_dir / "CMakeCache.txt"
         if not cmake_cache_file.is_file():
@@ -112,7 +118,7 @@ class BuildEnvironment:
             """
         )
         cmake_tpl += "\n".join([d.to_zephyr_cmake(self) for d in dependencies])
-        dependencies = [d for d in dependencies if not d.is_header_only]
+        deps = [d.name for d in dependencies if not d.is_header_only]
         cmake_tpl += textwrap.dedent(
             f"""
 
@@ -121,7 +127,7 @@ class BuildEnvironment:
             zephyr_ld_options({' '.join(link_flags)})
 
             target_sources(app PRIVATE {" ".join(sources)})
-            target_link_libraries(app PRIVATE {" ".join(dependencies)})
+            target_link_libraries(app PRIVATE {" ".join(deps)})
             target_include_directories(app PRIVATE ../src)
             """
         )
