@@ -2,7 +2,7 @@ from dataclasses import dataclass
 import textwrap
 from pathlib import Path
 from utils.utils import exec_command
-from build_env import BuildEnv
+from setup import BuildEnvironment
 from itertools import chain
 
 
@@ -33,14 +33,14 @@ class ZephyrDependency:
             str(Path(s).relative_to(build_env.app_dir, walk_up=True))
             for s in self.sources
         ]
-        ret += f"\nzephyr_library_sources({' '.join(sources)})"
+        ret += f"\nzephyr_library_sources({' '.join(sorted(sources))})"
         private_include_dirs = [
             str(Path(d).relative_to(build_env.app_dir, walk_up=True))
             for d in self.private_include_dirs
         ]
-        ret += f"\nzephyr_library_include_directories({' '.join(private_include_dirs)})"
+        ret += f"\nzephyr_library_include_directories({' '.join(sorted(private_include_dirs))})"
         if self.build_flags:
-            ret += f"\nzephyr_library_compile_options({' '.join(self.build_flags)})"
+            ret += f"\nzephyr_library_compile_options({' '.join(sorted(self.build_flags))})"
         for d in self.dependencies:
             ret += f"\nzephyr_library_link_libraries({d})"
         return ret
@@ -48,7 +48,11 @@ class ZephyrDependency:
 
 class ZephyrEnvironment:
     def __init__(
-        self, project_dir: Path, source_dir: Path, build_dir: Path, build_env: BuildEnv
+        self,
+        project_dir: Path,
+        source_dir: Path,
+        build_dir: Path,
+        build_env: BuildEnvironment,
     ):
         self.project_dir = project_dir
         self.source_dir = source_dir
@@ -122,12 +126,12 @@ class ZephyrEnvironment:
         cmake_tpl += textwrap.dedent(
             f"""
 
-            zephyr_compile_options($<$<COMPILE_LANGUAGE:CXX>:{' '.join(build_flags)}>)
-            zephyr_include_directories({' '.join(dep_include_dirs)})
-            zephyr_ld_options({' '.join(link_flags)})
+            zephyr_compile_options($<$<COMPILE_LANGUAGE:CXX>:{' '.join(sorted(build_flags))}>)
+            zephyr_include_directories({' '.join(sorted(dep_include_dirs))})
+            zephyr_ld_options({' '.join(sorted(link_flags))})
 
-            target_sources(app PRIVATE {" ".join(sources)})
-            target_link_libraries(app PRIVATE {" ".join(deps)})
+            target_sources(app PRIVATE {" ".join(sorted(sources))})
+            target_link_libraries(app PRIVATE {" ".join(sorted(deps))})
             target_include_directories(app PRIVATE ../src)
             """
         )
@@ -180,6 +184,9 @@ class ZephyrEnvironment:
     ):
         self._generate_project_files(
             build_flags, link_flags, dependencies, source_files
+        )
+        print(
+            f"pristine: {pristine}, reconfigure_required: {self._is_reconfigure_required(board)}"
         )
 
         west_cmd = [

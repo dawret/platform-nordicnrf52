@@ -59,13 +59,13 @@ except:
     # Fall back to the default version
     SDK_VERSION = SDK_DEFAULT_VERSION
 
-build_env = setup.BuildEnv(
+build_env = setup.BuildEnvironment(
     base_dir=ROOT_DIR / "nrf-sdk",
     platform_dir=ROOT_DIR,
     sdk_version=SDK_VERSION,
     toolchain_archs=["arm-zephyr-eabi", "riscv64-zephyr-elf"],
 )
-build_env = setup.setup(SDK_VERSION, build_env, SDK_DOWNLOAD_DIR)
+build_env.setup(SDK_DOWNLOAD_DIR)
 # nrfutil_exe = None # nrfutil.setup(SDK_DOWNLOAD_DIR, SDK_INSTALL_DIR)
 # nrfutil_sdk = nrfutil.get_fake_sdk() #nrfutil_exe.get_sdk(SDK_VERSION, SDK_INSTALL_DIR)
 # if not nrfutil_sdk:
@@ -134,7 +134,7 @@ def build_action(target, source, env):
         link_flags=linkflags,
         dependencies=dependencies_from_env(env),
         source_files=source_files_from_env(env),
-        pristine=env.GetProjectOption("custom_pristine", "False").lower() == "true",
+        pristine=env.GetProjectOption("custom_pristine", "false").lower() == "true",
         verbose=int(ARGUMENTS.get("PIOVERBOSE", 0)) > 0,
     )
 
