@@ -51,15 +51,12 @@ SDK_DEFAULT_VERSION = "v2.9.2"
 
 try:
     # Try to get SDK version from project options first
-    SDK_VERSION = "v" + str(
-        semver.Version(
-            env.GetProjectOption("custom_framework_version", None)
-        ).truncate()
-    )
+    SDK_VERSION = "v" + str(semver.Version(env.GetProjectOption("custom_framework_version", None)).truncate())
 except:
     # Fall back to the default version
     SDK_VERSION = SDK_DEFAULT_VERSION
 
+# Setup nrf-sdk and toolchain
 build_env = setup.BuildEnvironment(
     base_dir=ROOT_DIR / "nrf-sdk",
     platform_dir=ROOT_DIR,
@@ -67,16 +64,22 @@ build_env = setup.BuildEnvironment(
     toolchain_archs=["arm-zephyr-eabi", "riscv64-zephyr-elf"],
 )
 build_env.setup(SDK_DOWNLOAD_DIR)
+
+# Setup nordic nrfutil
 nrfutil_exe = nrfutil.NrfUtil(
     path=build_env.base_dir / "nrfutil",
     build_env=build_env,
 )
 nrfutil_exe.setup(SDK_DOWNLOAD_DIR)
+
+# Setup jlink
 jlink_dir = platform.get_package_dir("tool-jlink")
 build_env.add_env({"PATH": jlink_dir, "LD_LIBRARY_PATH": jlink_dir})
+
+# Setup adafruit_nrfutil
 adafruit_nrfutil_dir = platform.get_package_dir("tool-adafruit-nrfutil")
 build_env.add_path(adafruit_nrfutil_dir)
-uf2conv = build_env.zephyr_dir / "scripts" / "build" / "uf2conv.py"
+adafruit_nrfutil = adafruit_nrfutil_dir / "adafruit-nrfutil.py"
 
 # Zephyr's final output file is merged.hex
 env.Replace(PROGSUFFIX=".hex")
@@ -103,14 +106,10 @@ def dependencies_from_env(env):
                 private_include_dirs=[dep.include_dir] if dep.include_dir else [],
                 sources=[
                     str(f.srcnode().get_abspath())
-                    for f in env.CollectBuildFiles(
-                        dep.build_dir, dep.src_dir, dep.src_filter
-                    )
+                    for f in env.CollectBuildFiles(dep.build_dir, dep.src_dir, dep.src_filter)
                 ],
                 build_flags=env.ProcessFlags(dep.build_flags),
-                dependencies=(
-                    [d["name"] for d in dep.dependencies] if dep.dependencies else []
-                ),
+                dependencies=([d["name"] for d in dep.dependencies] if dep.dependencies else []),
             )
         )
     return ret
@@ -156,22 +155,19 @@ env.Append(
     BUILDERS=dict(
         PackageDfuAdafruit=Builder(
             action=env.VerboseAction(
-                " ".join(
+                lambda target, source, env: build_env.run(
                     [
-                        '"$PYTHONEXE"',
-                        '"%s"'
-                        % join(
-                            platform.get_package_dir("tool-adafruit-nrfutil") or "",
-                            "adafruit-nrfutil.py",
-                        ),
+                        "python",
+                        str(adafruit_nrfutil),
                         "dfu",
                         "genpkg",
                         "--dev-type",
                         "0x0052",
                         "--application",
-                        "$SOURCES",
-                        "$TARGET",
-                    ]
+                        env.subst("$SOURCES"),
+                        env.subst("$TARGET"),
+                    ],
+                    "Failed to create DFU package",
                 ),
                 "Building $TARGET",
             ),
@@ -197,17 +193,18 @@ env.Append(
 def build_uf2(target, source, env):
     family_id = get_zephyr_config(env, "CONFIG_BUILD_OUTPUT_UF2_FAMILY_ID")
     cmd = env.VerboseAction(
-        " ".join(
+        lambda source, target, env: build_env.run(
             [
-                "$PYTHONEXE",
-                str(uf2conv),
+                "python",
+                str(build_env.uf2conf),
                 str(source[0].get_abspath()),
                 "-c",
                 "-f",
                 str(family_id),
                 "-o",
                 str(target[0].get_abspath()),
-            ]
+            ],
+            "Failed to create UF2 package",
         ),
         "Building $TARGET",
     )
@@ -230,12 +227,8 @@ target_hex = env.WestBuilder(env.subst("$PROGPATH"), [])
 AlwaysBuild(target_hex)
 
 target_uf2 = env.PackageUf2(join("$BUILD_DIR", "${PROGNAME}"), target_hex)
-target_dfu_adafruit = env.PackageDfuAdafruit(
-    join("$BUILD_DIR", "${PROGNAME}_adafruit"), target_hex
-)
-target_dfu_nordic = env.PackageDfuNordic(
-    join("$BUILD_DIR", "${PROGNAME}_nordic"), target_hex
-)
+target_dfu_adafruit = env.PackageDfuAdafruit(join("$BUILD_DIR", "${PROGNAME}_adafruit"), target_hex)
+target_dfu_nordic = env.PackageDfuNordic(join("$BUILD_DIR", "${PROGNAME}_nordic"), target_hex)
 
 ### Upload targets
 
@@ -257,9 +250,7 @@ env.AddPlatformTarget(
     upload.upload_swd(build_env.env, "jlink"),
     "Flash using J-Link",
 )
-env.AddPlatformTarget(
-    "flash_uf2", target_uf2, upload.upload_uf2_adafruit(uf2conv), "Flash using UF2"
-)
+env.AddPlatformTarget("flash_uf2", target_uf2, upload.upload_uf2_adafruit(uf2conv), "Flash using UF2")
 env.AddPlatformTarget(
     "flash_serial_adafruit",
     target_dfu_adafruit,
