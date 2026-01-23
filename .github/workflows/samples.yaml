@@ -68,7 +68,7 @@ jobs:
         board: [nrf54l15dk]
         sample:
           - "zephyr/samples/basic/blinky"
-          - "zephyr/samples/basic/hello_world"
+          - "nrf/samples/openthread/cli"
     runs-on: ${{ matrix.os }}
     steps:
       - uses: actions/checkout@v5
