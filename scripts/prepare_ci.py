@@ -7,6 +7,7 @@ ROOT_DIR = Path(__file__).parent.parent.resolve()
 sys.path.append(str(ROOT_DIR))
 sys.path.append(str(ROOT_DIR / "builder"))
 
+from builder import nrfutil
 from builder.setup import BuildEnvironment
 
 
@@ -64,6 +65,13 @@ def checkout_toolchain(sdk_version, toolchain_version):
     build_env.setup_toolchain_python()
     build_env.download_zephyr_sdk(build_env.base_dir / "downloads", setup_python_dir)
     build_env.install_nrf_sdk_python_requirements()
+
+    # Setup nordic nrfutil
+    nrfutil_exe = nrfutil.NrfUtil(
+        path=build_env.base_dir / "nrfutil",
+        build_env=build_env,
+    )
+    nrfutil_exe.setup(build_env.base_dir / "downloads")
 
 
 if __name__ == "__main__":
