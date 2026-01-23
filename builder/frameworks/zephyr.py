@@ -28,14 +28,10 @@ class ZephyrDependency:
         if self.is_header_only:
             return ""
         ret = f"zephyr_library_named({self.name})"
-        sources = [
-            str(Path(s).relative_to(build_env.app_dir, walk_up=True))
-            for s in self.sources
-        ]
+        sources = [str(Path(s).relative_to(build_env.app_dir, walk_up=True)) for s in self.sources]
         ret += f"\nzephyr_library_sources({' '.join(sorted(sources))})"
         private_include_dirs = [
-            str(Path(d).relative_to(build_env.app_dir, walk_up=True))
-            for d in self.private_include_dirs
+            str(Path(d).relative_to(build_env.app_dir, walk_up=True)) for d in self.private_include_dirs
         ]
         ret += f"\nzephyr_library_include_directories({' '.join(sorted(private_include_dirs))})"
         if self.build_flags:
@@ -81,17 +77,11 @@ class ZephyrEnvironment:
         if not build_ninja_file.is_file():
             return True
         pm_static_file = self.project_dir / "zephyr" / "pm_static.yml"
-        if (
-            pm_static_file.is_file()
-            and pm_static_file.stat().st_mtime > cmake_cache_file.stat().st_mtime
-        ):
+        if pm_static_file.is_file() and pm_static_file.stat().st_mtime > cmake_cache_file.stat().st_mtime:
             # Reconfigure if pm_static.yml has changed
             return True
         board_file = self.project_dir / "boards" / f"{board}.json"
-        if (
-            board_file.is_file()
-            and board_file.stat().st_mtime > cmake_cache_file.stat().st_mtime
-        ):
+        if board_file.is_file() and board_file.stat().st_mtime > cmake_cache_file.stat().st_mtime:
             # Reconfigure if the board configuration has changed
             return True
         return False
@@ -104,9 +94,7 @@ class ZephyrEnvironment:
         source_files: list[Path],
     ):
         sources = [str(f.relative_to(self.app_dir, walk_up=True)) for f in source_files]
-        dep_include_dirs = set(
-            chain.from_iterable(d.include_dirs(self) for d in dependencies)
-        )
+        dep_include_dirs = set(chain.from_iterable(d.include_dirs(self) for d in dependencies))
         self.app_dir.mkdir(parents=True, exist_ok=True)
         cmake_file = self.app_dir / "CMakeLists.txt"
         cmake_tpl = textwrap.dedent(
@@ -125,9 +113,9 @@ class ZephyrEnvironment:
         cmake_tpl += textwrap.dedent(
             f"""
 
-            zephyr_compile_options($<$<COMPILE_LANGUAGE:CXX>:{' '.join(sorted(build_flags))}>)
-            zephyr_include_directories({' '.join(sorted(dep_include_dirs))})
-            zephyr_ld_options({' '.join(sorted(link_flags))})
+            zephyr_compile_options($<$<COMPILE_LANGUAGE:CXX>:{" ".join(sorted(build_flags))}>)
+            zephyr_include_directories({" ".join(sorted(dep_include_dirs))})
+            zephyr_ld_options({" ".join(sorted(link_flags))})
 
             target_sources(app PRIVATE {" ".join(sorted(sources))})
             target_link_libraries(app PRIVATE {" ".join(sorted(deps))})
@@ -181,22 +169,14 @@ class ZephyrEnvironment:
         pristine: bool = False,
         verbose: bool = False,
     ):
-        self._generate_project_files(
-            build_flags, link_flags, dependencies, source_files
-        )
-        print(
-            f"pristine: {pristine}, reconfigure_required: {self._is_reconfigure_required(board)}"
-        )
+        self._generate_project_files(build_flags, link_flags, dependencies, source_files)
+        print(f"pristine: {pristine}, reconfigure_required: {self._is_reconfigure_required(board)}")
 
         west_cmd = [
             "west",
             "build",
             "--sysbuild",
-            (
-                "--pristine"
-                if pristine or self._is_reconfigure_required(board)
-                else "--pristine=auto"
-            ),
+            ("--pristine" if pristine or self._is_reconfigure_required(board) else "--pristine=auto"),
             "-b",
             board,
             "-d",

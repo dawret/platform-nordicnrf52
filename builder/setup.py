@@ -8,9 +8,7 @@ import yaml
 from utils.utils import exec_command, get_platform_string, download_file
 
 EXTENSION = "7z" if os.name == "nt" else "tar.xz"
-SDK_BASE_URL = (
-    "https://github.com/zephyrproject-rtos/sdk-ng/releases/download/v{version}/"
-)
+SDK_BASE_URL = "https://github.com/zephyrproject-rtos/sdk-ng/releases/download/v{version}/"
 SDK_FILE_NAME = f"zephyr-sdk-{{version}}_{get_platform_string()}_minimal.{EXTENSION}"
 PYTHON_VERSION = "3.12"
 PYTHON_SETUP_MODULES = ["west", "py7zr"]
@@ -98,7 +96,7 @@ class BuildEnvironment:
     @property
     def zephyr_dir(self):
         return self.sdk_dir / "zephyr"
-    
+
     @property
     def uf2conf(self):
         return self.zephyr_dir / "scripts" / "build" / "uf2conv.py"
@@ -138,14 +136,10 @@ class BuildEnvironment:
 
     def _get_clean_env(self):
         if os.name == "nt":
-            res = exec_command(
-                ["cmd", "/c", "echo %PATH%"], "Failed to get system path", env={}
-            )
+            res = exec_command(["cmd", "/c", "echo %PATH%"], "Failed to get system path", env={})
         else:
             shell = os.environ.get("SHELL", "/bin/sh")
-            res = exec_command(
-                [shell, "-c", "echo $PATH"], "Failed to get system path", env={}
-            )
+            res = exec_command([shell, "-c", "echo $PATH"], "Failed to get system path", env={})
         return [Path(s) for s in res.stdout.strip().split(os.pathsep)]
 
     def add_env(self, additional_env):
@@ -213,9 +207,7 @@ class BuildEnvironment:
             setup_file_name = "setup.sh"
 
         # Rename extracted directory to standard name to satisfy CMake
-        Path(
-            self.toolchain_dir / "opt" / f"zephyr-sdk-{self.toolchain_version}"
-        ).rename(self.zephyr_sdk_dir)
+        Path(self.toolchain_dir / "opt" / f"zephyr-sdk-{self.toolchain_version}").rename(self.zephyr_sdk_dir)
 
         zephyr_sdk_setup = self.zephyr_sdk_dir / setup_file_name
 
@@ -224,9 +216,7 @@ class BuildEnvironment:
         cmd = [str(zephyr_sdk_setup)]
         for tc in self.toolchain_archs:
             cmd += ["-t", tc]
-        self.run(
-            cmd, "Failed to install Zephyr SDK toolchain", cwd=str(self.zephyr_sdk_dir)
-        )
+        self.run(cmd, "Failed to install Zephyr SDK toolchain", cwd=str(self.zephyr_sdk_dir))
 
         # Copy cmake files
         shutil.copytree(
@@ -324,11 +314,7 @@ class BuildEnvironment:
 
     def setup(self, download_dir: Path):
         valid_marker = self.sdk_dir / ".valid"
-        if (
-            valid_marker.is_file()
-            and valid_marker.stat().st_mtime
-            > Path(self.sdk_dir / ".west").stat().st_mtime
-        ):
+        if valid_marker.is_file() and valid_marker.stat().st_mtime > Path(self.sdk_dir / ".west").stat().st_mtime:
             print("nRF Connect SDK already set up.")
             self.toolchain_version = self.get_toolchain_version()
             return self

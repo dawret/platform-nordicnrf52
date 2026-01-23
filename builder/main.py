@@ -140,7 +140,7 @@ def build_action(target, source, env):
         dependencies=dependencies_from_env(env),
         source_files=source_files_from_env(env),
         pristine=env.GetProjectOption("custom_pristine", "false").lower() == "true",
-        verbose=int(ARGUMENTS.get("PIOVERBOSE", 0)) > 0, # noqa: F821
+        verbose=int(ARGUMENTS.get("PIOVERBOSE", 0)) > 0,  # noqa: F821
     )
 
 

@@ -6,9 +6,7 @@ import os
 from utils.utils import download_file, get_platform_slug
 from setup import BuildEnvironment
 
-NORDIC_BASE_URL = (
-    "https://files.nordicsemi.com/artifactory/swtools/external/nrfutil/executables/"
-)
+NORDIC_BASE_URL = "https://files.nordicsemi.com/artifactory/swtools/external/nrfutil/executables/"
 EXTENSION = ".exe" if os.name == "nt" else ""
 SUBCOMMANDS = ["nrf5sdk-tools", "device"]
 

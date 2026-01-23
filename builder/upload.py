@@ -15,9 +15,7 @@ platform = env.PioPlatform()
 board = env.BoardConfig()
 
 RESET_TIMEOUT = 10  # seconds
-REGEX = re.compile(
-    r"USB VID:PID=(?P<vid>[0-9A-Fa-f]{4}):(?P<pid>[0-9A-Fa-f]{4}) SER=(?P<ser>[^ ]+)"
-)
+REGEX = re.compile(r"USB VID:PID=(?P<vid>[0-9A-Fa-f]{4}):(?P<pid>[0-9A-Fa-f]{4}) SER=(?P<ser>[^ ]+)")
 
 
 def get_serial_port_info(desc):
@@ -60,9 +58,7 @@ def reset_to_bootloader(target, source, env):  # pylint: disable=W0613,W0621
             new_vid, new_pid, new_ser = get_serial_port_info(port["hwid"])
             if not new_vid or not new_pid or not new_ser:
                 continue
-            if ser == new_ser and (
-                new_vid in VIDS_PIDS and new_pid in VIDS_PIDS[new_vid]
-            ):
+            if ser == new_ser and (new_vid in VIDS_PIDS and new_pid in VIDS_PIDS[new_vid]):
                 print(f"Device reset detected on port {port['port']}")
                 env.Replace(UPLOAD_PORT=port["port"])
                 return
@@ -121,7 +117,7 @@ def upload_serial_adafruit(adafruit_nrfutil):
             ],
             UPLOADCMD='"$PYTHONEXE" "$UPLOADER" $UPLOADERFLAGS -pkg $SOURCE',
         )
-        cmd=env.VerboseAction("$UPLOADCMD", "Uploading $SOURCE")
+        cmd = env.VerboseAction("$UPLOADCMD", "Uploading $SOURCE")
         return cmd(target, source, env)
 
     return [
