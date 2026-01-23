@@ -3,7 +3,7 @@ import shutil
 from urllib.parse import urljoin
 import os
 
-from utils.utils import exec_command, download_file, get_platform_slug
+from utils.utils import download_file, get_platform_slug
 from setup import BuildEnvironment
 
 NORDIC_BASE_URL = (

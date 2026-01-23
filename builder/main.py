@@ -24,14 +24,14 @@ from SCons.Script import (
     DefaultEnvironment,
 )
 
-env = DefaultEnvironment()
-platform = env.PioPlatform()
-board = env.BoardConfig()
-
 import setup
 import nrfutil
 from frameworks import zephyr
 import upload
+
+env = DefaultEnvironment()
+platform = env.PioPlatform()
+board = env.BoardConfig()
 
 
 def get_zephyr_config(env, name):
@@ -52,7 +52,7 @@ SDK_DEFAULT_VERSION = "v2.9.2"
 try:
     # Try to get SDK version from project options first
     SDK_VERSION = "v" + str(semver.Version(env.GetProjectOption("custom_framework_version", None)).truncate())
-except:
+except:  # noqa: E722
     # Fall back to the default version
     SDK_VERSION = SDK_DEFAULT_VERSION
 
@@ -84,13 +84,14 @@ adafruit_nrfutil = adafruit_nrfutil_dir / "adafruit-nrfutil.py"
 # Zephyr's final output file is merged.hex
 env.Replace(PROGSUFFIX=".hex")
 env.Replace(PROGNAME="merged")
+env.Replace(PYTHONEXE=str(build_env.python))
 
 
 def source_files_from_env(env):
     "Gather source files from PIOBUILDFILES"
     files = chain.from_iterable(env.get("PIOBUILDFILES"))
     files = chain.from_iterable([f.sources for f in files])
-    files = [Path((f.srcnode().get_abspath())) for f in files]
+    files = [Path(f.srcnode().get_abspath()) for f in files]
     files.sort()
     return files
 
@@ -139,7 +140,7 @@ def build_action(target, source, env):
         dependencies=dependencies_from_env(env),
         source_files=source_files_from_env(env),
         pristine=env.GetProjectOption("custom_pristine", "false").lower() == "true",
-        verbose=int(ARGUMENTS.get("PIOVERBOSE", 0)) > 0,
+        verbose=int(ARGUMENTS.get("PIOVERBOSE", 0)) > 0, # noqa: F821
     )
 
 
@@ -250,11 +251,11 @@ env.AddPlatformTarget(
     upload.upload_swd(build_env.env, "jlink"),
     "Flash using J-Link",
 )
-env.AddPlatformTarget("flash_uf2", target_uf2, upload.upload_uf2_adafruit(uf2conv), "Flash using UF2")
+env.AddPlatformTarget("flash_uf2", target_uf2, upload.upload_uf2_adafruit(build_env), "Flash using UF2")
 env.AddPlatformTarget(
     "flash_serial_adafruit",
     target_dfu_adafruit,
-    upload.upload_serial_adafruit(),
+    upload.upload_serial_adafruit(adafruit_nrfutil),
     "Flash using Adafruit uf2 bootloader (serial)",
 )
 env.AddPlatformTarget(

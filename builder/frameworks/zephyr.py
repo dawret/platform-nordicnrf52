@@ -1,7 +1,6 @@
 from dataclasses import dataclass
 import textwrap
 from pathlib import Path
-from utils.utils import exec_command
 from setup import BuildEnvironment
 from itertools import chain
 
@@ -66,7 +65,7 @@ class ZephyrEnvironment:
             cwd = self.build_env.sdk_dir
         ret = self.build_env.run(
             cmd,
-            f"West command failed",
+            "West command failed",
             cwd=cwd,
             **kwargs,
         )

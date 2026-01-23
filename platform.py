@@ -14,7 +14,6 @@
 
 
 from platformio.public import PlatformBase
-import platform
 
 
 class Nordicnrf52Platform(PlatformBase):

@@ -9,7 +9,7 @@ from utils.utils import exec_command, get_platform_string, download_file
 
 EXTENSION = "7z" if os.name == "nt" else "tar.xz"
 SDK_BASE_URL = (
-    f"https://github.com/zephyrproject-rtos/sdk-ng/releases/download/v{{version}}/"
+    "https://github.com/zephyrproject-rtos/sdk-ng/releases/download/v{version}/"
 )
 SDK_FILE_NAME = f"zephyr-sdk-{{version}}_{get_platform_string()}_minimal.{EXTENSION}"
 PYTHON_VERSION = "3.12"
@@ -288,12 +288,12 @@ class BuildEnvironment:
         ]
         for req in requirements_files:
             cmd.extend(["-r", str(req)])
-        print(f"Installing nRF Connect SDK Python requirements...")
+        print("Installing nRF Connect SDK Python requirements...")
         exec_command(cmd, "Failed to install nRF Connect SDK Python requirements")
 
     def disable_nrf_modules(self):
         west_yml = self.sdk_dir / "nrf" / "west.yml"
-        with open(west_yml, "r") as f:
+        with open(west_yml) as f:
             west_config = yaml.safe_load(f)
         new_west_config = west_config.copy()
         projects = west_config["manifest"]["projects"]

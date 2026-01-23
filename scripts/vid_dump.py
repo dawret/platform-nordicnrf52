@@ -22,7 +22,7 @@ def main(uf2_repo_path):
                     vid = value
                 elif name.endswith("_PID"):
                     pids.add(value)
-        if vid == None:
+        if vid is None:
             print(f"Warning! No VID found in {header_file}")
             continue
         if vid not in vids_pids:
