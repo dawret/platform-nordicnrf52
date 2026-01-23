@@ -61,8 +61,8 @@ def checkout_toolchain(sdk_version, toolchain_version):
 
     setup_python_dir = build_env.setup_install_python()
     build_env.toolchain_version = toolchain_version
-    build_env.download_zephyr_sdk(build_env.base_dir / "downloads", setup_python_dir)
     build_env.setup_toolchain_python()
+    build_env.download_zephyr_sdk(build_env.base_dir / "downloads", setup_python_dir)
     build_env.install_nrf_sdk_python_requirements()
 
 

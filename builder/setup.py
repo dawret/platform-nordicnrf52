@@ -11,7 +11,7 @@ EXTENSION = "7z" if os.name == "nt" else "tar.xz"
 SDK_BASE_URL = "https://github.com/zephyrproject-rtos/sdk-ng/releases/download/v{version}/"
 SDK_FILE_NAME = f"zephyr-sdk-{{version}}_{get_platform_string()}_minimal.{EXTENSION}"
 PYTHON_VERSION = "3.12"
-PYTHON_SETUP_MODULES = ["west", "py7zr", "cmake"]
+PYTHON_SETUP_MODULES = ["west", "py7zr"]
 PYTHON_BUILD_MODULES = ["west", "ninja", "cmake", "pyocd"]
 NRF_SDK_URL = "https://github.com/nrfconnect/sdk-nrf"
 NRF_DISABLED_MODULES = [
@@ -67,7 +67,6 @@ class BuildEnvironment:
         self.platform_dir = platform_dir
         self.toolchain_archs = toolchain_archs
         self.fresh_install = False
-        self._base_path = self._get_clean_env()
 
         self._user_env = {"PATH": [], "LD_LIBRARY_PATH": []}
 
@@ -106,7 +105,7 @@ class BuildEnvironment:
         path = [self.zephyr_sdk_dir / tc / "bin" for tc in self.toolchain_archs]
         path += [
             self.python_dir / "bin",
-            *self._base_path,
+            *self._get_system_path(),
         ]
         return path
 
@@ -129,6 +128,7 @@ class BuildEnvironment:
         return env
 
     def run(self, cmd: list[str], msg, **kwargs):
+        print(self.env)
         return exec_command(
             cmd,
             msg,
@@ -136,13 +136,8 @@ class BuildEnvironment:
             **kwargs,
         )
 
-    def _get_clean_env(self):
-        if os.name == "nt":
-            res = exec_command(["cmd", "/c", "echo %PATH%"], "Failed to get system path", env={})
-        else:
-            shell = os.environ.get("SHELL", "/bin/sh")
-            res = exec_command([shell, "-c", "echo $PATH"], "Failed to get system path", env={})
-        return [Path(s) for s in res.stdout.strip().split(os.pathsep)]
+    def _get_system_path(self):
+        return [Path(s) for s in os.environ['PATH'].strip().split(os.pathsep)]
 
     def add_env(self, additional_env):
         self._user_env = self._merge_env(self._user_env, additional_env)
@@ -343,11 +338,10 @@ class BuildEnvironment:
         # Get toolchain version from nrf sdk
         self.toolchain_version = self.get_toolchain_version()
 
-        # Download and setup Zephyr SDK Toolchain
-        self.download_zephyr_sdk(download_dir, setup_python_dir)
-
         # Setup the build python environment
         self.setup_toolchain_python()
+        # Download and setup Zephyr SDK Toolchain
+        self.download_zephyr_sdk(download_dir, setup_python_dir)
         self.install_nrf_sdk_python_requirements()
         print("Success!")
         valid_marker.touch()
