@@ -176,7 +176,7 @@ class BuildEnvironment:
             tools = yaml.safe_load(f)
         return tools["zephyr-sdk"]["version"]
 
-    def download_zephyr_sdk(self, download_dir: Path):
+    def download_zephyr_sdk(self, download_dir: Path, setup_python_dir: Path):
         if (self.zephyr_sdk_dir / "sdk_version").is_file() and all(
             (self.zephyr_sdk_dir / tc).is_dir() for tc in self.toolchain_archs
         ):
@@ -197,8 +197,14 @@ class BuildEnvironment:
         print(f"Extracting Zephyr SDK version {self.toolchain_version}...")
         self.zephyr_sdk_dir.mkdir(parents=True, exist_ok=True)
         if os.name == "nt":
-            self.run(
-                ["py7zr", "x", str(local_path)],
+            exec_command(
+                [
+                    str(setup_python_dir / "bin" / "python"),
+                    "-m",
+                    "py7zr",
+                    "x",
+                    str(local_path),
+                ],
                 "Failed to extract Zephyr SDK archive",
                 cwd=str(self.toolchain_dir / "opt"),
             )
@@ -314,6 +320,15 @@ class BuildEnvironment:
         self.disable_nrf_modules()
         self.update_nrf_sdk(setup_python_dir)
 
+    def setup_install_python(self):
+        setup_python_dir = self.base_dir / "python"
+        setup_python(PYTHON_SETUP_MODULES, setup_python_dir)
+        return setup_python_dir
+    
+    def setup_toolchain_python(self):
+        setup_python(PYTHON_BUILD_MODULES, self.python_dir)
+        return self.python_dir
+
     def setup(self, download_dir: Path):
         valid_marker = self.sdk_dir / ".valid"
         if valid_marker.is_file() and valid_marker.stat().st_mtime > Path(self.sdk_dir / ".west").stat().st_mtime:
@@ -322,18 +337,17 @@ class BuildEnvironment:
             return self
         valid_marker.unlink(missing_ok=True)
         # Setup a small python venv for checking out nrf sdk
-        setup_python_dir = self.base_dir / "python"
-        setup_python(PYTHON_SETUP_MODULES, setup_python_dir)
+        setup_python_dir = self.setup_install_python()
         self.setup_nrf_sdk(setup_python_dir)
 
         # Get toolchain version from nrf sdk
         self.toolchain_version = self.get_toolchain_version()
 
         # Download and setup Zephyr SDK Toolchain
-        self.download_zephyr_sdk(download_dir)
+        self.download_zephyr_sdk(download_dir, setup_python_dir)
 
         # Setup the build python environment
-        setup_python(PYTHON_BUILD_MODULES, self.python_dir)
+        self.setup_toolchain_python()
         self.install_nrf_sdk_python_requirements()
         print("Success!")
         valid_marker.touch()
