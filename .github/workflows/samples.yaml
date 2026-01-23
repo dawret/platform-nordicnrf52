@@ -1,0 +1,28 @@
+name: Samples
+
+on: push
+
+jobs:
+  build:
+    strategy:
+      matrix:
+        os: [ubuntu-latest]
+        sample:
+          - "zephyr/samples/basic/blinky"
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          fetch-depth: 1
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Install python dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r ./scripts/requirements_ci.txt  
+      - name: Build Sample
+        run: |
+          python ./scripts/build_sample.py -b nrf54l15dk -sv 2.9.2 ${{ matrix.sample }}
+          

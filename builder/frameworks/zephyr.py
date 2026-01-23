@@ -46,13 +46,14 @@ class ZephyrEnvironment:
         self,
         project_dir: Path,
         source_dir: Path,
+        app_dir: Path,
         build_dir: Path,
         build_env: BuildEnvironment,
     ):
         self.project_dir = project_dir
         self.source_dir = source_dir
         self.build_dir = build_dir
-        self.app_dir = project_dir / "zephyr"
+        self.app_dir = app_dir
         self.build_env = build_env
         self.reconfigure_required = False
 
@@ -76,7 +77,7 @@ class ZephyrEnvironment:
         build_ninja_file = self.build_dir / "build.ninja"
         if not build_ninja_file.is_file():
             return True
-        pm_static_file = self.project_dir / "zephyr" / "pm_static.yml"
+        pm_static_file = self.app_dir / "pm_static.yml"
         if pm_static_file.is_file() and pm_static_file.stat().st_mtime > cmake_cache_file.stat().st_mtime:
             # Reconfigure if pm_static.yml has changed
             return True
@@ -168,9 +169,10 @@ class ZephyrEnvironment:
         source_files: list[Path],
         pristine: bool = False,
         verbose: bool = False,
+        generate_project_files: bool = True,
     ):
-        self._generate_project_files(build_flags, link_flags, dependencies, source_files)
-        print(f"pristine: {pristine}, reconfigure_required: {self._is_reconfigure_required(board)}")
+        if generate_project_files:
+            self._generate_project_files(build_flags, link_flags, dependencies, source_files)
 
         west_cmd = [
             "west",
