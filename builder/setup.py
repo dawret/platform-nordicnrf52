@@ -71,7 +71,7 @@ class BuildEnvironment:
         self.fresh_install = False
         self._base_path = self._get_clean_env()
 
-        self._user_env = {"PATH": []}
+        self._user_env = {"PATH": [], "LD_LIBRARY_PATH": []}
 
     @property
     def sdk_dir(self):
@@ -100,23 +100,28 @@ class BuildEnvironment:
         return self.sdk_dir / "zephyr"
 
     @property
-    def path(self):
-        path = [
-            *self._base_path,
+    def _path(self):
+        path = [self.zephyr_sdk_dir / tc / "bin" for tc in self.toolchain_archs]
+        path += [
             self.python_dir / "bin",
+            *self._base_path,
         ]
-        path += [self.zephyr_sdk_dir / tc / "bin" for tc in self.toolchain_archs]
-        path += self._user_env.get("PATH", [])
         return path
 
     @property
     def env(self):
         env = {
-            "PATH": os.pathsep.join([str(p) for p in self.path]),
+            "PATH": self._path,
             "ZEPHYR_SDK_INSTALL_DIR": str(self.zephyr_sdk_dir),
             "ZEPHYR_TOOLCHAIN_VARIANT": "zephyr",
             "VIRTUALENV": str(self.python_dir),
         }
+        env = self._merge_env(env, self._user_env)
+        for k, v in env.items():
+            if isinstance(v, list):
+                env[k] = os.pathsep.join([str(p) for p in v])
+            else:
+                env[k] = str(v)
         return env
 
     def run(self, cmd: list[str], msg, **kwargs):
@@ -138,6 +143,26 @@ class BuildEnvironment:
                 [shell, "-c", "echo $PATH"], "Failed to get system path", env={}
             )
         return [Path(s) for s in res.stdout.strip().split(os.pathsep)]
+
+    def add_env(self, additional_env):
+        self._user_env = self._merge_env(self._user_env, additional_env)
+
+    def add_path(self, path: list[Path] | Path):
+        if isinstance(path, Path):
+            path = [path]
+        self.add_env({"PATH": path})
+
+    def _merge_env(self, env, additional_env):
+        env = env.copy()
+        for k, n in additional_env.items():
+            if k in env and isinstance(env[k], list):
+                if isinstance(n, list):
+                    env[k] = n + env[k]
+                else:
+                    env[k] = str(n).split(os.pathsep) + env[k]
+            else:
+                env[k] = str(n)
+        return env
 
     def get_toolchain_version(self):
         base_dir = self.sdk_dir / "nrf" / "scripts"

@@ -29,6 +29,7 @@ platform = env.PioPlatform()
 board = env.BoardConfig()
 
 import setup
+import nrfutil
 from frameworks import zephyr
 import upload
 
@@ -66,11 +67,15 @@ build_env = setup.BuildEnvironment(
     toolchain_archs=["arm-zephyr-eabi", "riscv64-zephyr-elf"],
 )
 build_env.setup(SDK_DOWNLOAD_DIR)
-# nrfutil_exe = None # nrfutil.setup(SDK_DOWNLOAD_DIR, SDK_INSTALL_DIR)
-# nrfutil_sdk = nrfutil.get_fake_sdk() #nrfutil_exe.get_sdk(SDK_VERSION, SDK_INSTALL_DIR)
-# if not nrfutil_sdk:
-#    print(f"Installing SDK version {SDK_VERSION}...")
-#    nrfutil_sdk = nrfutil_exe.install_sdk(SDK_VERSION, SDK_INSTALL_DIR)
+nrfutil_exe = nrfutil.NrfUtil(
+    path=build_env.base_dir / "nrfutil",
+    build_env=build_env,
+)
+nrfutil_exe.setup(SDK_DOWNLOAD_DIR)
+jlink_dir = platform.get_package_dir("tool-jlink")
+build_env.add_env({"PATH": jlink_dir, "LD_LIBRARY_PATH": jlink_dir})
+adafruit_nrfutil_dir = platform.get_package_dir("tool-adafruit-nrfutil")
+build_env.add_path(adafruit_nrfutil_dir)
 uf2conv = build_env.zephyr_dir / "scripts" / "build" / "uf2conv.py"
 
 # Zephyr's final output file is merged.hex
