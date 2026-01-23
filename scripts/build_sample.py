@@ -28,7 +28,7 @@ def generate_env_platformio_ini(target_dir: Path, sdk_version, board: str):
     }
     ini["env:sample_env"] = {
         "platform": "nordicnrf52",
-        "custom_framework_version": sdk_version,
+        "custom_framework_version": sdk_version[1:],
         "board": board,
     }
     with open(target_dir / "platformio.ini", "w") as f:
@@ -48,7 +48,7 @@ def generate_sample_platformio_ini(build_dir: Path, sample_name: str, board: str
         "platform": "nordicnrf52",
         "board": board,
         "framework": "zephyr",
-        "custom_framework_version": sdk_version,
+        "custom_framework_version": sdk_version[1:],
         "custom_zephyr_app_dir": sample_name,
         "custom_generate_project_files": "false",
     }
@@ -71,7 +71,7 @@ def build_sample(sample, sdk_dir, build_dir, board, sdk_version):
 @click.command()
 @click.option("-d", "--build-dir", type=str, default=Path("build"))
 @click.option("-b", "--board", type=str)
-@click.option("-sv", "--sdk_version", type=str, default="2.9.2")
+@click.option("-sv", "--sdk_version", type=str, default="v2.9.2")
 @click.argument("sample", type=str, nargs=-1)
 def main(build_dir, board, sdk_version, sample):
     build_dir = Path(build_dir)

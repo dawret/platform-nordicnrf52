@@ -21,7 +21,7 @@ def checkout_sdk(sdk_version):
     build_env = BuildEnvironment(
         base_dir=ROOT_DIR / "nrf-sdk",
         platform_dir=ROOT_DIR,
-        sdk_version="v"+sdk_version,
+        sdk_version=sdk_version,
         toolchain_archs=["arm-zephyr-eabi", "riscv64-zephyr-elf"],
     )
 
@@ -39,7 +39,7 @@ def get_toolchain_version(sdk_version):
     build_env = BuildEnvironment(
         base_dir=ROOT_DIR / "nrf-sdk",
         platform_dir=ROOT_DIR,
-        sdk_version="v"+sdk_version,
+        sdk_version=sdk_version,
         toolchain_archs=["arm-zephyr-eabi", "riscv64-zephyr-elf"],
     )
 
@@ -55,7 +55,7 @@ def checkout_toolchain(sdk_version, toolchain_version):
     build_env = BuildEnvironment(
         base_dir=ROOT_DIR / "nrf-sdk",
         platform_dir=ROOT_DIR,
-        sdk_version="v"+sdk_version,
+        sdk_version=sdk_version,
         toolchain_archs=["arm-zephyr-eabi", "riscv64-zephyr-elf"],
     )
 
