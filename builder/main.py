@@ -63,6 +63,7 @@ build_env = setup.BuildEnv(
     base_dir=ROOT_DIR / "nrf-sdk",
     platform_dir=ROOT_DIR,
     sdk_version=SDK_VERSION,
+    toolchain_archs=["arm-zephyr-eabi", "riscv64-zephyr-elf"],
 )
 build_env = setup.setup(SDK_VERSION, build_env, SDK_DOWNLOAD_DIR)
 # nrfutil_exe = None # nrfutil.setup(SDK_DOWNLOAD_DIR, SDK_INSTALL_DIR)

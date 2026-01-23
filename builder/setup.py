@@ -16,7 +16,6 @@ SDK_FILE_NAME = f"zephyr-sdk-{{version}}_{get_platform_string()}_minimal.{EXTENS
 PYTHON_VERSION = "3.12"
 PYTHON_SETUP_MODULES = ["west", "py7zr"]
 PYTHON_BUILD_MODULES = ["west", "ninja", "cmake", "pyocd"]
-ZEPHYR_TOOLCHAINS = ["arm-zephyr-eabi", "riscv64-zephyr-elf"]
 NRF_SDK_URL = "https://github.com/nrfconnect/sdk-nrf"
 NRF_DISABLED_MODULES = [
     "matter",
@@ -68,27 +67,29 @@ def setup_python(build_env: BuildEnv, modules: list[str], path: Path):
         + modules,
         "Failed to install required Python modules",
     )
-    build_env.append_path(path / "bin")
-    build_env.set_env("VIRTUALENV", path)
 
 
-def download_zephyr_sdk(version, build_env: BuildEnv, download_dir: Path):
-    if (build_env.zephyr_sdk_dir / "sdk_version").is_file():
+def download_zephyr_sdk(build_env: BuildEnv, download_dir: Path):
+    if (build_env.zephyr_sdk_dir / "sdk_version").is_file() and all(
+        (build_env.zephyr_sdk_dir / tc).is_dir() for tc in build_env.toolchain_archs
+    ):
         print("Zephyr SDK already installed.")
         return
     # Remove any existing installation
     shutil.rmtree(build_env.zephyr_sdk_dir, ignore_errors=True)
 
     url = SDK_BASE_URL + SDK_FILE_NAME
-    local_path = download_dir / SDK_FILE_NAME.format(version=version)
+    local_path = download_dir / SDK_FILE_NAME.format(
+        version=build_env.toolchain_version
+    )
     download_dir.mkdir(parents=True, exist_ok=True)
 
     # Download the SDK archive
     download_file(
-        url.format(version=version),
+        url.format(version=build_env.toolchain_version),
         local_path,
     )
-    print(f"Extracting Zephyr SDK version {version}...")
+    print(f"Extracting Zephyr SDK version {build_env.toolchain_version}...")
     build_env.zephyr_sdk_dir.mkdir(parents=True, exist_ok=True)
     if os.name == "nt":
         build_env.run(
@@ -103,16 +104,16 @@ def download_zephyr_sdk(version, build_env: BuildEnv, download_dir: Path):
         setup_file_name = "setup.sh"
 
     # Rename extracted directory to standard name to satisfy CMake
-    Path(build_env.toolchain_dir / "opt" / f"zephyr-sdk-{version}").rename(
-        build_env.zephyr_sdk_dir
-    )
+    Path(
+        build_env.toolchain_dir / "opt" / f"zephyr-sdk-{build_env.toolchain_version}"
+    ).rename(build_env.zephyr_sdk_dir)
 
     zephyr_sdk_setup = build_env.zephyr_sdk_dir / setup_file_name
 
-    print(f"Installing Zephyr SDK version {version}...")
+    print(f"Installing Zephyr SDK version {build_env.toolchain_version}...")
     # Install toolchains
     cmd = [str(zephyr_sdk_setup)]
-    for tc in ZEPHYR_TOOLCHAINS:
+    for tc in build_env.toolchain_archs:
         cmd += ["-t", tc]
     build_env.run(
         cmd, "Failed to install Zephyr SDK toolchain", cwd=str(build_env.zephyr_sdk_dir)
@@ -126,33 +127,16 @@ def download_zephyr_sdk(version, build_env: BuildEnv, download_dir: Path):
     )
 
 
-def setup_zephyr_sdk_paths(build_env: BuildEnv):
-    # Add toolchains to PATH
-    build_env.append_path(
-        [build_env.zephyr_sdk_dir / tc / "bin" for tc in ZEPHYR_TOOLCHAINS]
-    )
-    # Add host tools to PATH, if available
-    if Path(build_env.zephyr_sdk_dir / "sysroots" / "x86_64-pokysdk-linux").is_dir():
-        build_env.append_path(
-            build_env.zephyr_sdk_dir
-            / "sysroots"
-            / "x86_64-pokysdk-linux"
-            / "usr"
-            / "bin"
-        )
-
-    build_env.set_env("ZEPHYR_SDK_INSTALL_DIR", build_env.zephyr_sdk_dir)
-    build_env.set_env("ZEPHYR_TOOLCHAIN_VARIANT", "zephyr")
-
-
-def checkout_nrf_sdk(version, build_env: BuildEnv):
+def checkout_nrf_sdk(version, build_env: BuildEnv, setup_python_dir: Path):
     if (build_env.sdk_dir / ".west" / "config").is_file():
         # Already checked out
         return
     shutil.rmtree(build_env.sdk_dir, ignore_errors=True)
     print(f"Cloning nRF Connect SDK version {version}...")
-    build_env.run(
+    exec_command(
         [
+            str(setup_python_dir / "bin" / "python"),
+            "-m",
             "west",
             "init",
             "-m",
@@ -167,10 +151,17 @@ def checkout_nrf_sdk(version, build_env: BuildEnv):
     )
 
 
-def update_nrf_sdk(build_env: BuildEnv):
+def update_nrf_sdk(build_env: BuildEnv, setup_python_dir: Path):
     print("Updating nRF Connect SDK repository...")
-    build_env.run(
-        ["west", "update", "--narrow", "-o=--depth=1"],
+    exec_command(
+        [
+            str(setup_python_dir / "bin" / "python"),
+            "-m",
+            "west",
+            "update",
+            "--narrow",
+            "-o=--depth=1",
+        ],
         "Failed to update nRF Connect SDK repository",
         cwd=str(build_env.sdk_dir),
     )
@@ -222,10 +213,10 @@ def disable_nrf_modules(build_env: BuildEnv):
         yaml.dump(new_west_config, f)
 
 
-def setup_nrf_sdk(version, build_env: BuildEnv):
-    checkout_nrf_sdk(version, build_env)
+def setup_nrf_sdk(version, build_env: BuildEnv, setup_python_dir: Path):
+    checkout_nrf_sdk(version, build_env, setup_python_dir)
     disable_nrf_modules(build_env)
-    update_nrf_sdk(build_env)
+    update_nrf_sdk(build_env, setup_python_dir)
 
 
 def setup(sdk_version: str, build_env: BuildEnv, download_dir: Path):
@@ -236,20 +227,20 @@ def setup(sdk_version: str, build_env: BuildEnv, download_dir: Path):
         > Path(build_env.sdk_dir / ".west").stat().st_mtime
     ):
         print("nRF Connect SDK already set up.")
+        build_env.toolchain_version = get_toolchain_version(build_env)
         return build_env
-    
+
     valid_marker.unlink(missing_ok=True)
     # Setup a small python venv for checking out nrf sdk
-    setup_python(build_env, PYTHON_SETUP_MODULES, build_env.base_dir / "python")
-    setup_nrf_sdk(sdk_version, build_env)
+    setup_python_dir = build_env.base_dir / "python"
+    setup_python(build_env, PYTHON_SETUP_MODULES, setup_python_dir)
+    setup_nrf_sdk(sdk_version, build_env, setup_python_dir)
 
     # Get toolchain version from nrf sdk
-    toolchain_version = get_toolchain_version(build_env)
-    build_env.toolchain_version = toolchain_version
+    build_env.toolchain_version = get_toolchain_version(build_env)
 
     # Download and setup Zephyr SDK Toolchain
-    download_zephyr_sdk(toolchain_version, build_env, download_dir)
-    setup_zephyr_sdk_paths(build_env)
+    download_zephyr_sdk(build_env, download_dir)
 
     # Setup the build python environment
     setup_python(build_env, PYTHON_BUILD_MODULES, build_env.python_dir)

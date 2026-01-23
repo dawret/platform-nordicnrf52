@@ -10,16 +10,17 @@ class BuildEnv:
         base_dir: Path,
         platform_dir: Path,
         sdk_version: str,
+        toolchain_archs: list[str],
     ):
         self.base_dir = base_dir
         self.sdk_version = sdk_version
         self.toolchain_version = None
         self.platform_dir = platform_dir
+        self.toolchain_archs = toolchain_archs
         self.fresh_install = False
+        self._base_path = self._get_clean_env()
 
-        self._env = {
-            "PATH": self._get_clean_env(),
-        }
+        self._user_env = {"PATH": []}
 
     @property
     def sdk_dir(self):
@@ -46,25 +47,26 @@ class BuildEnv:
     @property
     def zephyr_dir(self):
         return self.sdk_dir / "zephyr"
+    
+    @property
+    def path(self):
+        path = [
+            *self._base_path,
+            self.python_dir / "bin",
+        ]
+        path += [self.zephyr_sdk_dir / tc / "bin" for tc in self.toolchain_archs]
+        path += self._user_env.get("PATH", [])
+        return path
 
     @property
     def env(self):
-        env = {}
-        for k, v in self._env.items():
-            if isinstance(v, list):
-                # Reverse the order to prioritize newly added paths
-                env[k] = os.pathsep.join(reversed([str(p) for p in v]))
-            elif v:
-                env[k] = str(v)
+        env = {
+            "PATH": os.pathsep.join([str(p) for p in self.path]),
+            "ZEPHYR_SDK_INSTALL_DIR": str(self.zephyr_sdk_dir),
+            "ZEPHYR_TOOLCHAIN_VARIANT": "zephyr",
+            "VIRTUALENV": str(self.python_dir),
+        }
         return env
-
-    def set_env(self, key: str, value: str | Path):
-        self._env[key] = value
-
-    def append_path(self, path: list[Path] | Path):
-        if not isinstance(path, list):
-            path = [path]
-        self._env["PATH"].extend(path)
 
     def run(self, cmd: list[str], msg, **kwargs):
         return exec_command(
