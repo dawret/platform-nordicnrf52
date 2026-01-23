@@ -64,7 +64,7 @@ build_env = setup.BuildEnv(
     platform_dir=ROOT_DIR,
     sdk_version=SDK_VERSION,
 )
-build_env = setup.setup("0.17.0", SDK_VERSION, build_env, SDK_DOWNLOAD_DIR)
+build_env = setup.setup(SDK_VERSION, build_env, SDK_DOWNLOAD_DIR)
 # nrfutil_exe = None # nrfutil.setup(SDK_DOWNLOAD_DIR, SDK_INSTALL_DIR)
 # nrfutil_sdk = nrfutil.get_fake_sdk() #nrfutil_exe.get_sdk(SDK_VERSION, SDK_INSTALL_DIR)
 # if not nrfutil_sdk:

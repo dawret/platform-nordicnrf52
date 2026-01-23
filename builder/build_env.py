@@ -13,6 +13,7 @@ class BuildEnv:
     ):
         self.base_dir = base_dir
         self.sdk_version = sdk_version
+        self.toolchain_version = None
         self.platform_dir = platform_dir
         self.fresh_install = False
 
@@ -23,23 +24,25 @@ class BuildEnv:
     @property
     def sdk_dir(self):
         return self.base_dir / self.sdk_version
-    
+
     @property
     def toolchain_dir(self):
-        return self.base_dir / "toolchain"
-    
+        if not self.toolchain_version:
+            raise ValueError("Toolchain version is not set")
+        return self.base_dir / "toolchains" / self.toolchain_version
+
     @property
     def zephyr_sdk_dir(self):
         return self.toolchain_dir / "opt" / "zephyr_sdk"
-    
+
     @property
     def python_dir(self):
         return self.toolchain_dir / "usr" / "local"
-    
+
     @property
     def python(self):
         return self.python_dir / "bin" / "python"
-    
+
     @property
     def zephyr_dir(self):
         return self.sdk_dir / "zephyr"
@@ -49,6 +52,7 @@ class BuildEnv:
         env = {}
         for k, v in self._env.items():
             if isinstance(v, list):
+                # Reverse the order to prioritize newly added paths
                 env[k] = os.pathsep.join(reversed([str(p) for p in v]))
             elif v:
                 env[k] = str(v)
