@@ -67,7 +67,6 @@ class BuildEnvironment:
         self.platform_dir = platform_dir
         self.toolchain_archs = toolchain_archs
         self.fresh_install = False
-        self._base_path = self._get_clean_env()
 
         self._user_env = {"PATH": [], "LD_LIBRARY_PATH": []}
 
@@ -106,7 +105,7 @@ class BuildEnvironment:
         path = [self.zephyr_sdk_dir / tc / "bin" for tc in self.toolchain_archs]
         path += [
             self.python_dir / "bin",
-            *self._base_path,
+            *self._get_system_path(),
         ]
         return path
 
@@ -117,6 +116,8 @@ class BuildEnvironment:
             "ZEPHYR_SDK_INSTALL_DIR": str(self.zephyr_sdk_dir),
             "ZEPHYR_TOOLCHAIN_VARIANT": "zephyr",
             "VIRTUALENV": str(self.python_dir),
+            "NRF_SDK_DIR": str(self.sdk_dir),
+            "NRF_SDK_VERSION": self.sdk_version,
         }
         env = self._merge_env(env, self._user_env)
         for k, v in env.items():
@@ -127,6 +128,7 @@ class BuildEnvironment:
         return env
 
     def run(self, cmd: list[str], msg, **kwargs):
+        print(self.env)
         return exec_command(
             cmd,
             msg,
@@ -134,13 +136,8 @@ class BuildEnvironment:
             **kwargs,
         )
 
-    def _get_clean_env(self):
-        if os.name == "nt":
-            res = exec_command(["cmd", "/c", "echo %PATH%"], "Failed to get system path", env={})
-        else:
-            shell = os.environ.get("SHELL", "/bin/sh")
-            res = exec_command([shell, "-c", "echo $PATH"], "Failed to get system path", env={})
-        return [Path(s) for s in res.stdout.strip().split(os.pathsep)]
+    def _get_system_path(self):
+        return [Path(s) for s in os.environ['PATH'].strip().split(os.pathsep)]
 
     def add_env(self, additional_env):
         self._user_env = self._merge_env(self._user_env, additional_env)
@@ -174,7 +171,7 @@ class BuildEnvironment:
             tools = yaml.safe_load(f)
         return tools["zephyr-sdk"]["version"]
 
-    def download_zephyr_sdk(self, download_dir: Path):
+    def download_zephyr_sdk(self, download_dir: Path, setup_python_dir: Path):
         if (self.zephyr_sdk_dir / "sdk_version").is_file() and all(
             (self.zephyr_sdk_dir / tc).is_dir() for tc in self.toolchain_archs
         ):
@@ -195,8 +192,14 @@ class BuildEnvironment:
         print(f"Extracting Zephyr SDK version {self.toolchain_version}...")
         self.zephyr_sdk_dir.mkdir(parents=True, exist_ok=True)
         if os.name == "nt":
-            self.run(
-                ["py7zr", "x", str(local_path)],
+            exec_command(
+                [
+                    str(setup_python_dir / "bin" / "python"),
+                    "-m",
+                    "py7zr",
+                    "x",
+                    str(local_path),
+                ],
                 "Failed to extract Zephyr SDK archive",
                 cwd=str(self.toolchain_dir / "opt"),
             )
@@ -312,6 +315,15 @@ class BuildEnvironment:
         self.disable_nrf_modules()
         self.update_nrf_sdk(setup_python_dir)
 
+    def setup_install_python(self):
+        setup_python_dir = self.base_dir / "python"
+        setup_python(PYTHON_SETUP_MODULES, setup_python_dir)
+        return setup_python_dir
+    
+    def setup_toolchain_python(self):
+        setup_python(PYTHON_BUILD_MODULES, self.python_dir)
+        return self.python_dir
+
     def setup(self, download_dir: Path):
         valid_marker = self.sdk_dir / ".valid"
         if valid_marker.is_file() and valid_marker.stat().st_mtime > Path(self.sdk_dir / ".west").stat().st_mtime:
@@ -320,18 +332,16 @@ class BuildEnvironment:
             return self
         valid_marker.unlink(missing_ok=True)
         # Setup a small python venv for checking out nrf sdk
-        setup_python_dir = self.base_dir / "python"
-        setup_python(PYTHON_SETUP_MODULES, setup_python_dir)
+        setup_python_dir = self.setup_install_python()
         self.setup_nrf_sdk(setup_python_dir)
 
         # Get toolchain version from nrf sdk
         self.toolchain_version = self.get_toolchain_version()
 
-        # Download and setup Zephyr SDK Toolchain
-        self.download_zephyr_sdk(download_dir)
-
         # Setup the build python environment
-        setup_python(PYTHON_BUILD_MODULES, self.python_dir)
+        self.setup_toolchain_python()
+        # Download and setup Zephyr SDK Toolchain
+        self.download_zephyr_sdk(download_dir, setup_python_dir)
         self.install_nrf_sdk_python_requirements()
         print("Success!")
         valid_marker.touch()

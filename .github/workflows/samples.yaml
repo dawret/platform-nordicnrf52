@@ -1,0 +1,115 @@
+name: Samples
+
+on: push
+
+jobs:
+  setup:
+    strategy:
+      matrix:
+        os: [ubuntu-latest, macos-latest]
+        sdk_version: [v2.9.2, v3.2.0]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          fetch-depth: 1
+          ref: ${{ github.head_ref || github.ref }}
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: "pip"
+          cache-dependency-path: scripts/requirements_ci.txt
+      - name: Install python dependencies (for setup)
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r ./scripts/requirements_ci.txt
+      - name: Cache SDK
+        uses: actions/cache@v4
+        id: cache-sdk
+        with:
+          path: |
+            nrf-sdk/${{ matrix.sdk_version }}
+          key: nrf-sdk-${{ matrix.sdk_version }}-${{ github.sha }}
+          restore-keys: |
+            nrf-sdk-${{ matrix.sdk_version }}-
+          enableCrossOsArchive: true
+      - name: Install SDK (if not cached)
+        if: steps.cache-sdk.outputs.cache-hit != 'true'
+        run: |
+          python ./scripts/prepare_ci.py checkout_sdk ${{ matrix.sdk_version }}
+      - name: Get toolchain info
+        id: toolchain-info
+        run: |
+          python ./scripts/prepare_ci.py get_toolchain_version ${{ matrix.sdk_version }} >> "$GITHUB_OUTPUT"
+      - name: Cache toolchain
+        uses: actions/cache@v4
+        id: cache-toolchain
+        with:
+          path: |
+            nrf-sdk/toolchains/${{ steps.toolchain-info.outputs.TOOLCHAIN_VERSION }}
+            nrf-sdk/nrfutil
+            nrf-sdk/python
+            ~/.platformio/packages  
+          key: nrf-sdk-toolchains-${{ matrix.os }}-${{ steps.toolchain-info.outputs.TOOLCHAIN_VERSION }}-${{ github.sha }}
+          restore-keys: |
+            nrf-sdk-toolchains-${{ matrix.os }}-${{ steps.toolchain-info.outputs.TOOLCHAIN_VERSION }}-
+      - name: Install toolchain (if not cached)
+        if: steps.cache-toolchain.outputs.cache-hit != 'true'
+        run: |
+          python ./scripts/prepare_ci.py checkout_toolchain ${{ matrix.sdk_version }} ${{ steps.toolchain-info.outputs.TOOLCHAIN_VERSION }}
+
+  build:
+    needs: setup
+    strategy:
+      matrix:
+        os: [ubuntu-latest, macos-latest]
+        sdk_version: [v2.9.2, v3.2.0]
+        board: [nrf54l15dk]
+        sample:
+          - "zephyr/samples/basic/blinky"
+          - "nrf/samples/openthread/cli"
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          fetch-depth: 1
+          ref: ${{ github.head_ref || github.ref }}
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: "pip"
+          cache-dependency-path: scripts/requirements_ci.txt
+      - name: Install python dependencies (for setup)
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r ./scripts/requirements_ci.txt
+          pio pkg install --global --platform symlink://.
+      - name: Restore SDK cache
+        uses: actions/cache@v4
+        with:
+          path: |
+            nrf-sdk/${{ matrix.sdk_version }}
+          key: nrf-sdk-${{ matrix.sdk_version }}-${{ github.sha }}
+          restore-keys: |
+            nrf-sdk-${{ matrix.sdk_version }}-
+          enableCrossOsArchive: true
+      - name: Get toolchain info
+        id: toolchain-info
+        run: |
+          python ./scripts/prepare_ci.py get_toolchain_version ${{ matrix.sdk_version }} >> "$GITHUB_OUTPUT"
+      - name: Restore toolchain cache
+        uses: actions/cache@v4
+        with:
+          path: |
+            nrf-sdk/toolchains/${{ steps.toolchain-info.outputs.TOOLCHAIN_VERSION }}
+            nrf-sdk/nrfutil
+            nrf-sdk/python
+            ~/.platformio/packages
+          key: nrf-sdk-toolchains-${{ matrix.os }}-${{ steps.toolchain-info.outputs.TOOLCHAIN_VERSION }}-${{ github.sha }}
+          restore-keys: |
+            nrf-sdk-toolchains-${{ matrix.os }}-${{ steps.toolchain-info.outputs.TOOLCHAIN_VERSION }}-
+      - name: Build Sample
+        run: |
+          python ./scripts/build_sample.py -b ${{ matrix.board }} -sv ${{ matrix.sdk_version }} ${{ matrix.sample }}

@@ -13,6 +13,7 @@
 # limitations under the License.
 
 from itertools import chain
+import json
 from os.path import join, isfile
 from pathlib import Path
 import semantic_version as semver
@@ -46,7 +47,7 @@ def get_zephyr_config(env, name):
 
 ROOT_DIR = Path(platform.get_dir())
 SDK_INSTALL_DIR = ROOT_DIR / "nrf-sdk"
-SDK_DOWNLOAD_DIR = ROOT_DIR / "nrf-sdk/downloads"
+SDK_DOWNLOAD_DIR = ROOT_DIR / "nrf-sdk" / "downloads"
 SDK_DEFAULT_VERSION = "v2.9.2"
 
 try:
@@ -73,11 +74,11 @@ nrfutil_exe = nrfutil.NrfUtil(
 nrfutil_exe.setup(SDK_DOWNLOAD_DIR)
 
 # Setup jlink
-jlink_dir = platform.get_package_dir("tool-jlink")
+jlink_dir = Path(platform.get_package_dir("tool-jlink"))
 build_env.add_env({"PATH": jlink_dir, "LD_LIBRARY_PATH": jlink_dir})
 
 # Setup adafruit_nrfutil
-adafruit_nrfutil_dir = platform.get_package_dir("tool-adafruit-nrfutil")
+adafruit_nrfutil_dir = Path(platform.get_package_dir("tool-adafruit-nrfutil"))
 build_env.add_path(adafruit_nrfutil_dir)
 adafruit_nrfutil = adafruit_nrfutil_dir / "adafruit-nrfutil.py"
 
@@ -126,10 +127,14 @@ def build_action(target, source, env):
     cflags = env.get("BUILD_FLAGS", [])
     linkflags = [x for x in env.get("BUILD_FLAGS", []) if x.startswith("-Wl,")]
 
+    app_dir_name = env.GetProjectOption("custom_zephyr_app_dir", "zephyr")
+    zephyr_app_dir = Path(env.subst("$PROJECT_DIR")) / app_dir_name
+
     zephyr_env = zephyr.ZephyrEnvironment(
         project_dir=Path(env.subst("$PROJECT_DIR")),
         source_dir=Path(env.subst("$PROJECT_SRC_DIR")),
         build_dir=Path(env.subst("$BUILD_DIR")),
+        app_dir=zephyr_app_dir,
         build_env=build_env,
     )
 
@@ -141,6 +146,7 @@ def build_action(target, source, env):
         source_files=source_files_from_env(env),
         pristine=env.GetProjectOption("custom_pristine", "false").lower() == "true",
         verbose=int(ARGUMENTS.get("PIOVERBOSE", 0)) > 0,  # noqa: F821
+        generate_project_files=env.GetProjectOption("custom_generate_project_files", "true").lower() == "true",
     )
 
 
@@ -220,6 +226,21 @@ env.Append(
             src_suffix=".hex",
         )
     )
+)
+
+
+def dump_env_action(target, source, env):
+    print("==== Build Environment ====")
+    print(json.dumps(build_env.env, indent=2))
+    print("==== End Build Environment ====")
+
+
+### Dump env target
+env.AddPlatformTarget(
+    "dump_env",
+    None,
+    dump_env_action,
+    "Dump build environment variables",
 )
 
 ### Build targets
