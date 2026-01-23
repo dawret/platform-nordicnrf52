@@ -237,6 +237,8 @@ def setup(sdk_version: str, build_env: BuildEnv, download_dir: Path):
     ):
         print("nRF Connect SDK already set up.")
         return build_env
+    
+    valid_marker.unlink(missing_ok=True)
     # Setup a small python venv for checking out nrf sdk
     setup_python(build_env, PYTHON_SETUP_MODULES, build_env.base_dir / "python")
     setup_nrf_sdk(sdk_version, build_env)
