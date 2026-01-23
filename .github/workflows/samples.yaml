@@ -22,6 +22,7 @@ jobs:
         run: |
           python -m pip install --upgrade pip
           pip install -r ./scripts/requirements_ci.txt  
+          pio pkg install --global --platform symlink://.
       - name: Build Sample
         run: |
           python ./scripts/build_sample.py -b nrf54l15dk -sv 2.9.2 ${{ matrix.sample }}
