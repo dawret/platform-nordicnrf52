@@ -16,7 +16,7 @@ SDK_FILE_NAME = f"zephyr-sdk-{{version}}_{get_platform_string()}_minimal.{EXTENS
 PYTHON_VERSION = "3.12"
 PYTHON_SETUP_MODULES = ["west", "py7zr"]
 PYTHON_BUILD_MODULES = ["west", "ninja", "cmake", "pyocd"]
-ZEPHYR_TOOLCHAINS = ["arm-zephyr-eabi"]  # , "riscv64-zephyr-elf"]
+ZEPHYR_TOOLCHAINS = ["arm-zephyr-eabi", "riscv64-zephyr-elf"]
 NRF_SDK_URL = "https://github.com/nrfconnect/sdk-nrf"
 NRF_DISABLED_MODULES = [
     "matter",
@@ -26,6 +26,9 @@ NRF_DISABLED_MODULES = [
     "hal_st",
     "hostap",
     "loramac-node",
+    "tf-m-tests",
+    "psa-arch-tests",
+    "qcbor",
 ]
 
 
