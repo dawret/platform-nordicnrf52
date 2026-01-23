@@ -41,7 +41,7 @@ jobs:
       - name: Get toolchain info
         id: toolchain-info
         run: |
-          python ./scripts/prepare_ci.py get_toolchain_version ${{ matrix.sdk_version }}
+          python ./scripts/prepare_ci.py get_toolchain_version ${{ matrix.sdk_version }} >> "$GITHUB_OUTPUT"
       - name: Cache toolchain
         uses: actions/cache@v4
         id: cache-toolchain
@@ -97,7 +97,7 @@ jobs:
       - name: Get toolchain info
         id: toolchain-info
         run: |
-          python ./scripts/prepare_ci.py get_toolchain_version ${{ matrix.sdk_version }}
+          python ./scripts/prepare_ci.py get_toolchain_version ${{ matrix.sdk_version }} >> "$GITHUB_OUTPUT"
       - name: Restore toolchain cache
         uses: actions/cache@v4
         with:
