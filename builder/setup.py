@@ -16,8 +16,17 @@ SDK_FILE_NAME = f"zephyr-sdk-{{version}}_{get_platform_string()}_minimal.{EXTENS
 PYTHON_VERSION = "3.12"
 PYTHON_SETUP_MODULES = ["west", "py7zr"]
 PYTHON_BUILD_MODULES = ["west", "ninja", "cmake", "pyocd"]
-ZEPHYR_TOOLCHAINS = ["arm-zephyr-eabi", "riscv64-zephyr-elf"]
+ZEPHYR_TOOLCHAINS = ["arm-zephyr-eabi"]  # , "riscv64-zephyr-elf"]
 NRF_SDK_URL = "https://github.com/nrfconnect/sdk-nrf"
+NRF_DISABLED_MODULES = [
+    "matter",
+    "lvgl",
+    "trusted-firmware-m",
+    "sidewalk",
+    "hal_st",
+    "hostap",
+    "loramac-node",
+]
 
 
 def get_toolchain_version(build_env: BuildEnv):
@@ -134,7 +143,7 @@ def setup_zephyr_sdk_paths(build_env: BuildEnv):
 
 
 def checkout_nrf_sdk(version, build_env: BuildEnv):
-    if (build_env.sdk_dir / ".west" / "config").is_dir():
+    if (build_env.sdk_dir / ".west" / "config").is_file():
         # Already checked out
         return
     shutil.rmtree(build_env.sdk_dir, ignore_errors=True)
@@ -183,8 +192,36 @@ def install_nrf_sdk_python_requirements(build_env: BuildEnv):
     exec_command(cmd, "Failed to install nRF Connect SDK Python requirements")
 
 
+def disable_nrf_modules(build_env: BuildEnv):
+    west_yml = build_env.sdk_dir / "nrf" / "west.yml"
+    with open(west_yml, "r") as f:
+        west_config = yaml.safe_load(f)
+    new_west_config = west_config.copy()
+    projects = west_config["manifest"]["projects"]
+
+    # Filter out disabled modules and update zephyr project
+    filtered_projects = []
+    for project in projects:
+        if project["name"] in NRF_DISABLED_MODULES:
+            continue  # Skip this project entirely
+        if project["name"] == "zephyr":
+            # Remove disabled modules from zephyr's name-allowlist
+            for mod in NRF_DISABLED_MODULES:
+                try:
+                    project["import"]["name-allowlist"].remove(mod)
+                except (ValueError, KeyError):
+                    pass
+        filtered_projects.append(project)
+
+    new_west_config["manifest"]["projects"] = filtered_projects
+
+    with open(west_yml, "w") as f:
+        yaml.dump(new_west_config, f)
+
+
 def setup_nrf_sdk(version, build_env: BuildEnv):
     checkout_nrf_sdk(version, build_env)
+    disable_nrf_modules(build_env)
     update_nrf_sdk(build_env)
 
 
