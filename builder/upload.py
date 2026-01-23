@@ -1,7 +1,5 @@
 from utils.usb_vids import VIDS_PIDS
 
-import os
-from os.path import join
 from pathlib import Path
 import re
 import time
@@ -17,9 +15,7 @@ platform = env.PioPlatform()
 board = env.BoardConfig()
 
 RESET_TIMEOUT = 10  # seconds
-REGEX = re.compile(
-    r"USB VID:PID=(?P<vid>[0-9A-Fa-f]{4}):(?P<pid>[0-9A-Fa-f]{4}) SER=(?P<ser>[^ ]+)"
-)
+REGEX = re.compile(r"USB VID:PID=(?P<vid>[0-9A-Fa-f]{4}):(?P<pid>[0-9A-Fa-f]{4}) SER=(?P<ser>[^ ]+)")
 
 
 def get_serial_port_info(desc):
@@ -62,24 +58,15 @@ def reset_to_bootloader(target, source, env):  # pylint: disable=W0613,W0621
             new_vid, new_pid, new_ser = get_serial_port_info(port["hwid"])
             if not new_vid or not new_pid or not new_ser:
                 continue
-            if ser == new_ser and (
-                new_vid in VIDS_PIDS and new_pid in VIDS_PIDS[new_vid]
-            ):
+            if ser == new_ser and (new_vid in VIDS_PIDS and new_pid in VIDS_PIDS[new_vid]):
                 print(f"Device reset detected on port {port['port']}")
                 env.Replace(UPLOAD_PORT=port["port"])
                 return
         time.sleep(0.5)
 
 
-def upload_swd(sdk_env, runner=None):
-    jlink_dir = platform.get_package_dir("tool-jlink")
-
+def upload_swd(build_env, runner=None):
     def upload_action(target, source, env):
-        west_env = sdk_env.copy()
-        west_env["PATH"] = f"{jlink_dir}{os.pathsep}{west_env.get('PATH','')}"
-        west_env["LD_LIBRARY_PATH"] = (
-            f"{jlink_dir}{os.pathsep}{west_env.get('LD_LIBRARY_PATH','')}"
-        )
         if runner is not None:
             west_runner = f"--runner {runner}"
         else:
@@ -89,19 +76,19 @@ def upload_swd(sdk_env, runner=None):
             UPLOADER="west",
             WEST_RUNNER=west_runner,
             UPLOADCMD="$UPLOADER flash $WEST_RUNNER --build-dir $BUILD_DIR -- $UPLOADERFLAGS",
-            ENV=west_env,
+            ENV=build_env.env,
         )
         print(env.subst("$UPLOADCMD"))
-        cmd = env.Action("$UPLOADCMD", "Uploading $SOURCE", chdir=str(sdk.sdk_path))
+        cmd = env.Action("$UPLOADCMD", "Uploading $SOURCE", chdir=str(build_env.sdk_path))
         return cmd(target, source, env)
 
     return [upload_action]
 
 
-def upload_uf2_adafruit(uf2conv):
+def upload_uf2_adafruit(build_env):
     def upload_action(target, source, env):
         env.Replace(
-            UPLOADER=str(uf2conv),
+            UPLOADER=str(build_env.uf2conv),
             UPLOADERFLAGS=["-D", "-d", "$UPLOAD_PORT"],
             UPLOADCMD='"$PYTHONEXE" "$UPLOADER" $SOURCE $UPLOADERFLAGS',
         )
@@ -113,15 +100,12 @@ def upload_uf2_adafruit(uf2conv):
     ]
 
 
-def upload_serial_adafruit():
+def upload_serial_adafruit(adafruit_nrfutil):
     def upload_action(target, source, env):
         if not env.get("UPLOAD_SPEED"):
             env.Replace(UPLOAD_SPEED="115200")
         env.Replace(
-            UPLOADER=join(
-                platform.get_package_dir("tool-adafruit-nrfutil") or "",
-                "adafruit-nrfutil.py",
-            ),
+            UPLOADER=str(adafruit_nrfutil),
             UPLOADERFLAGS=[
                 "dfu",
                 "serial",
@@ -132,8 +116,9 @@ def upload_serial_adafruit():
                 "--singlebank",
             ],
             UPLOADCMD='"$PYTHONEXE" "$UPLOADER" $UPLOADERFLAGS -pkg $SOURCE',
-            cmd=env.VerboseAction("$UPLOADCMD", "Uploading $SOURCE"),
         )
+        cmd = env.VerboseAction("$UPLOADCMD", "Uploading $SOURCE")
+        return cmd(target, source, env)
 
     return [
         env.Action(reset_to_bootloader),

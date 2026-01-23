@@ -3,6 +3,7 @@ from pathlib import Path
 import urllib.request
 import subprocess
 
+
 def exec_command(cmd, msg, **kwargs):
     result = subprocess.run(
         cmd,
@@ -14,18 +15,19 @@ def exec_command(cmd, msg, **kwargs):
         raise RuntimeError(f"{msg}:\ncmd: {cmd}\nstdout: {result.stdout}\nstderr: {result.stderr}")
     return result
 
+
 def get_platform_string():
     os_map = {
-        'linux': 'linux',
-        'darwin': 'macos',
-        'windows': 'windows',
+        "linux": "linux",
+        "darwin": "macos",
+        "windows": "windows",
     }
 
     arch_map = {
-        'x86_64': 'x86_64',
-        'amd64': 'x86_64',
-        'aarch64': 'aarch64',
-        'arm64': 'aarch64',
+        "x86_64": "x86_64",
+        "amd64": "x86_64",
+        "aarch64": "aarch64",
+        "arm64": "aarch64",
     }
     system = platform.system().lower()
     machine = platform.machine().lower()
@@ -35,12 +37,11 @@ def get_platform_string():
 
     return f"{os_name}-{arch_name}"
 
+
 def get_platform_slug():
     if platform.system().lower() == "windows":
         if platform.machine() != "x86_64" and platform.machine() != "AMD64":
-            raise RuntimeError(
-                f"Unsupported architecture: {platform.machine()} on Windows"
-            )
+            raise RuntimeError(f"Unsupported architecture: {platform.machine()} on Windows")
         return "x86_64-pc-windows-msvc"
     elif platform.system().lower() == "linux":
         if platform.machine() == "x86_64":
@@ -62,6 +63,7 @@ def get_platform_slug():
             )
     else:
         raise RuntimeError(f"Unsupported operating system: {platform.system()}")
+
 
 def download_file(url: str, destination: Path):
     print(f"Downloading {url}...")

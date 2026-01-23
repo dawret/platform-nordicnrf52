@@ -1,0 +1,11 @@
+[project]
+name = "platform-nordicnrf52"
+version = "12.0.0"
+requires-python = ">=3.12"
+
+[tool.ruff]
+target-version = "py312"
+line-length = 120
+lint.extend-select = [
+  "UP",
+]

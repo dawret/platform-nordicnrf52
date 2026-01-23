@@ -14,10 +14,8 @@
 
 
 from platformio.public import PlatformBase
-import platform
 
 
 class Nordicnrf52Platform(PlatformBase):
-
     def is_embedded(self):
         return True
