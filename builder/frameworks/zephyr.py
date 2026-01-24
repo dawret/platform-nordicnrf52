@@ -60,6 +60,7 @@ class ZephyrEnvironment:
     def run(self, cmd: list[str], cwd=None, **kwargs):
         if not cwd:
             cwd = self.build_env.sdk_dir
+        cmd = [str(self.build_env.python), "-m"] + cmd
         ret = self.build_env.run(
             cmd,
             "West command failed",

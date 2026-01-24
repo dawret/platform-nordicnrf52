@@ -40,6 +40,7 @@ jobs:
           python ./scripts/prepare_ci.py checkout_sdk ${{ matrix.sdk_version }}
       - name: Get toolchain info
         id: toolchain-info
+        shell: bash
         run: |
           python ./scripts/prepare_ci.py get_toolchain_version ${{ matrix.sdk_version }} >> "$GITHUB_OUTPUT"
       - name: Cache toolchain
@@ -96,6 +97,7 @@ jobs:
           enableCrossOsArchive: true
       - name: Get toolchain info
         id: toolchain-info
+        shell: bash
         run: |
           python ./scripts/prepare_ci.py get_toolchain_version ${{ matrix.sdk_version }} >> "$GITHUB_OUTPUT"
       - name: Restore toolchain cache

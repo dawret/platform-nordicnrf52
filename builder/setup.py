@@ -122,15 +122,11 @@ class BuildEnvironment:
         env["PATH"] = env["PATH"].split(os.pathsep)
         new_env = {
             "PATH": self._path,
-            "PATHEXT": os.environ.get("PATHEXT", ""),
-            "COMSPEC": os.environ.get("COMSPEC", ""),
             "ZEPHYR_SDK_INSTALL_DIR": str(self.zephyr_sdk_dir),
             "ZEPHYR_TOOLCHAIN_VARIANT": "zephyr",
             "VIRTUALENV": str(self.python_dir),
-            "NRF_SDK_DIR": str(self.sdk_dir),
-            "NRF_SDK_VERSION": self.sdk_version,
         }
-        env = self._merge_env(new_env, env)
+        env = self._merge_env(env, new_env)
         env = self._merge_env(env, self._user_env)
         for k, v in env.items():
             if isinstance(v, list):
