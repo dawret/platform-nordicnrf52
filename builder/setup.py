@@ -11,7 +11,7 @@ EXTENSION = "7z" if os.name == "nt" else "tar.xz"
 SDK_BASE_URL = "https://github.com/zephyrproject-rtos/sdk-ng/releases/download/v{version}/"
 SDK_FILE_NAME = f"zephyr-sdk-{{version}}_{get_platform_string()}_minimal.{EXTENSION}"
 PYTHON_VERSION = "3.12"
-PYTHON_SETUP_MODULES = ["west", "py7zr"]
+PYTHON_SETUP_MODULES = ["west"]
 PYTHON_BUILD_MODULES = ["west", "ninja", "cmake", "pyocd"]
 NRF_SDK_URL = "https://github.com/nrfconnect/sdk-nrf"
 NRF_DISABLED_MODULES = [
@@ -40,13 +40,17 @@ def setup_python(modules: list[str], path: Path):
         ],
         "Failed to setup Python virtual environment",
     )
+    if os.name == "nt":
+        python_exe = path / "Scripts" / "python.exe"
+    else:
+        python_exe = path / "bin" / "python"
     exec_command(
         [
             "uv",
             "pip",
             "install",
             "--python",
-            str(path / "bin" / "python"),
+            str(python_exe),
         ]
         + modules,
         "Failed to install required Python modules",
@@ -90,6 +94,8 @@ class BuildEnvironment:
 
     @property
     def python(self):
+        if os.name == "nt":
+            return self.python_dir / "Scripts" / "python.exe"
         return self.python_dir / "bin" / "python"
 
     @property
@@ -104,21 +110,27 @@ class BuildEnvironment:
     def _path(self):
         path = [self.zephyr_sdk_dir / tc / "bin" for tc in self.toolchain_archs]
         path += [
-            self.python_dir / "bin",
-            *self._get_system_path(),
+            self.python_dir / ("Scripts" if os.name == "nt" else "bin"),
         ]
+        if os.name == "nt":
+            path += [r"C:\\msys64\\usr\\bin\\"]
         return path
 
     @property
     def env(self):
-        env = {
+        env = os.environ.copy()
+        env["PATH"] = env["PATH"].split(os.pathsep)
+        new_env = {
             "PATH": self._path,
+            "PATHEXT": os.environ.get("PATHEXT", ""),
+            "COMSPEC": os.environ.get("COMSPEC", ""),
             "ZEPHYR_SDK_INSTALL_DIR": str(self.zephyr_sdk_dir),
             "ZEPHYR_TOOLCHAIN_VARIANT": "zephyr",
             "VIRTUALENV": str(self.python_dir),
             "NRF_SDK_DIR": str(self.sdk_dir),
             "NRF_SDK_VERSION": self.sdk_version,
         }
+        env = self._merge_env(new_env, env)
         env = self._merge_env(env, self._user_env)
         for k, v in env.items():
             if isinstance(v, list):
@@ -127,8 +139,12 @@ class BuildEnvironment:
                 env[k] = str(v)
         return env
 
+    def _python_exe_from_dir(self, python_dir: Path):
+        if os.name == "nt":
+            return python_dir / "Scripts" / "python.exe"
+        return python_dir / "bin" / "python"
+
     def run(self, cmd: list[str], msg, **kwargs):
-        print(self.env)
         return exec_command(
             cmd,
             msg,
@@ -190,13 +206,11 @@ class BuildEnvironment:
             local_path,
         )
         print(f"Extracting Zephyr SDK version {self.toolchain_version}...")
-        self.zephyr_sdk_dir.mkdir(parents=True, exist_ok=True)
+        self.zephyr_sdk_dir.parent.mkdir(parents=True, exist_ok=True)
         if os.name == "nt":
             exec_command(
                 [
-                    str(setup_python_dir / "bin" / "python"),
-                    "-m",
-                    "py7zr",
+                    "7z",
                     "x",
                     str(local_path),
                 ],
@@ -218,7 +232,7 @@ class BuildEnvironment:
         # Install toolchains
         cmd = [str(zephyr_sdk_setup)]
         for tc in self.toolchain_archs:
-            cmd += ["-t", tc]
+            cmd += ["/t" if os.name == "nt" else "-t", tc]
         self.run(cmd, "Failed to install Zephyr SDK toolchain", cwd=str(self.zephyr_sdk_dir))
 
         # Copy cmake files
@@ -234,9 +248,10 @@ class BuildEnvironment:
             return
         shutil.rmtree(self.sdk_dir, ignore_errors=True)
         print(f"Cloning nRF Connect SDK version {self.sdk_version}...")
+        python_exe = self._python_exe_from_dir(setup_python_dir)
         exec_command(
             [
-                str(setup_python_dir / "bin" / "python"),
+                str(python_exe),
                 "-m",
                 "west",
                 "init",
@@ -253,9 +268,10 @@ class BuildEnvironment:
 
     def update_nrf_sdk(self, setup_python_dir: Path):
         print("Updating nRF Connect SDK repository...")
+        python_exe = self._python_exe_from_dir(setup_python_dir)
         exec_command(
             [
-                str(setup_python_dir / "bin" / "python"),
+                str(python_exe),
                 "-m",
                 "west",
                 "update",

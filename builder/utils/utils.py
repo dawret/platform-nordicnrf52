@@ -40,6 +40,7 @@ def get_platform_string():
 
 def get_platform_slug():
     if platform.system().lower() == "windows":
+        print(f"Comparison: {platform.machine() != 'AMD64'}")
         if platform.machine() != "x86_64" and platform.machine() != "AMD64":
             raise RuntimeError(f"Unsupported architecture: {platform.machine()} on Windows")
         return "x86_64-pc-windows-msvc"
