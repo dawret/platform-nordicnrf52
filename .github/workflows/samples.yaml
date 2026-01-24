@@ -6,7 +6,7 @@ jobs:
   setup:
     strategy:
       matrix:
-        os: [ubuntu-latest, macos-latest]
+        os: [ubuntu-latest, macos-latest, windows-latest]
         sdk_version: [v2.9.2, v3.2.0]
     runs-on: ${{ matrix.os }}
     steps:
@@ -63,7 +63,7 @@ jobs:
     needs: setup
     strategy:
       matrix:
-        os: [ubuntu-latest, macos-latest]
+        os: [ubuntu-latest, macos-latest, windows-latest]
         sdk_version: [v2.9.2, v3.2.0]
         board: [nrf54l15dk]
         sample:
