@@ -2,13 +2,17 @@ from pathlib import Path
 import shutil
 from urllib.parse import urljoin
 import os
+import platform
 
-from utils.utils import download_file, get_platform_slug
+from utils.utils import download_file, get_platform_slug, get_platform_string
 from setup import BuildEnvironment
 
 NORDIC_BASE_URL = "https://files.nordicsemi.com/artifactory/swtools/external/nrfutil/executables/"
 EXTENSION = ".exe" if os.name == "nt" else ""
-SUBCOMMANDS = ["nrf5sdk-tools", "device"]
+SUBCOMMANDS = ["device"]
+if get_platform_string() != "linux-aarch64":
+    # Linux arm64 currently doesn't support this module
+    SUBCOMMANDS.append("nrf5sdk-tools")
 
 
 class NrfUtil:
@@ -49,6 +53,8 @@ class NrfUtil:
         self.run(["install"] + SUBCOMMANDS)
 
     def create_dfu_package(self, input: Path, output: Path):
+        if get_platform_string() == "linux-aarch64":
+            raise RuntimeError("Nordic DFU is not supported on Linux aarch64")
         args = [
             "pkg",
             "generate",
@@ -67,6 +73,8 @@ class NrfUtil:
             raise RuntimeError(f"Failed to create DFU package at {output}")
 
     def flash_dfu_package(self, port: str, speed: str, package: Path):
+        if get_platform_string() == "linux-aarch64":
+            raise RuntimeError("Nordic DFU is not supported on Linux aarch64")
         args = [
             "dfu",
             "usb-serial",
