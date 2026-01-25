@@ -2,18 +2,49 @@ import platform
 from pathlib import Path
 import urllib.request
 import subprocess
+import threading
 
 
-def exec_command(cmd, msg, **kwargs):
-    result = subprocess.run(
+def exec_command(cmd, msg="Command failed", verbose=False, **kwargs):
+    def read_stream(stream, output_list):
+        for line in stream:
+            output_list.append(line)
+            if verbose:
+                print(line, end="")
+
+    stdout_lines = []
+    stderr_lines = []
+
+    with subprocess.Popen(
         cmd,
-        capture_output=True,
-        encoding="utf-8",
+        stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE,
+        text=True,
+        bufsize=1,
         **kwargs,
-    )
-    if result.returncode != 0:
-        raise RuntimeError(f"{msg}:\ncmd: {cmd}\nstdout: {result.stdout}\nstderr: {result.stderr}")
-    return result
+    ) as process:
+        stdout_thread = threading.Thread(target=read_stream, args=(process.stdout, stdout_lines))
+        stderr_thread = threading.Thread(target=read_stream, args=(process.stderr, stderr_lines))
+
+        stdout_thread.start()
+        stderr_thread.start()
+
+        stdout_thread.join()
+        stderr_thread.join()
+
+    process.stdout = "".join(stdout_lines)
+    process.stderr = "".join(stderr_lines)
+
+    if process.returncode != 0:
+        if verbose:
+            # If verbose, the output has already been printed
+            raise RuntimeError(f"{msg}: Command returned non-zero exit status {process.returncode}")
+        else:
+            raise RuntimeError(
+                f"{msg}: Command {cmd} returned non-zero exit status {process.returncode}: \n{process.stdout}\n{process.stderr}"
+            )
+
+    return process
 
 
 def is_arm64():

@@ -1,7 +1,6 @@
 import sys
 from pathlib import Path
 import click
-import os
 
 ROOT_DIR = Path(__file__).parent.parent.resolve()
 sys.path.append(str(ROOT_DIR))

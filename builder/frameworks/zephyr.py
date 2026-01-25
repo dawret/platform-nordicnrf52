@@ -57,7 +57,7 @@ class ZephyrEnvironment:
         self.build_env = build_env
         self.reconfigure_required = False
 
-    def run(self, cmd: list[str], cwd=None, **kwargs):
+    def run(self, cmd: list[str], cwd=None, verbose=False, **kwargs):
         if not cwd:
             cwd = self.build_env.sdk_dir
         cmd = [str(self.build_env.python), "-m"] + cmd
@@ -65,6 +65,7 @@ class ZephyrEnvironment:
             cmd,
             "West command failed",
             cwd=cwd,
+            verbose=verbose,
             **kwargs,
         )
         return (ret.stdout, ret.stderr)
@@ -190,10 +191,7 @@ class ZephyrEnvironment:
         if verbose:
             print(" ".join(map(str, west_cmd)))
 
-        out, err = self.run(
+        self.run(
             west_cmd,
+            verbose=verbose,
         )
-
-        if verbose:
-            print(out)
-            print(err)
