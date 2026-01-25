@@ -127,6 +127,7 @@ class BuildEnvironment:
             "VIRTUALENV": str(self.python_dir),
             "NRF_SDK_DIR": str(self.sdk_dir),
             "NRF_SDK_VERSION": self.sdk_version,
+            "NcsToolchain_ROOT": str(self.platform_dir / "files" / "cmake"),
         }
         env = self._merge_env(env, new_env)
         env = self._merge_env(env, self._user_env)
@@ -151,7 +152,7 @@ class BuildEnvironment:
         )
 
     def _get_system_path(self):
-        return [Path(s) for s in os.environ['PATH'].strip().split(os.pathsep)]
+        return [Path(s) for s in os.environ["PATH"].strip().split(os.pathsep)]
 
     def add_env(self, additional_env):
         self._user_env = self._merge_env(self._user_env, additional_env)
@@ -232,13 +233,6 @@ class BuildEnvironment:
         for tc in self.toolchain_archs:
             cmd += ["/t" if os.name == "nt" else "-t", tc]
         self.run(cmd, "Failed to install Zephyr SDK toolchain", cwd=str(self.zephyr_sdk_dir))
-
-        # Copy cmake files
-        shutil.copytree(
-            self.platform_dir / "files" / "cmake",
-            self.toolchain_dir / "cmake",
-            dirs_exist_ok=True,
-        )
 
     def checkout_nrf_sdk(self, setup_python_dir: Path):
         if (self.sdk_dir / ".west" / "config").is_file():
@@ -333,7 +327,7 @@ class BuildEnvironment:
         setup_python_dir = self.base_dir / "python"
         setup_python(PYTHON_SETUP_MODULES, setup_python_dir)
         return setup_python_dir
-    
+
     def setup_toolchain_python(self):
         setup_python(PYTHON_BUILD_MODULES, self.python_dir)
         return self.python_dir
