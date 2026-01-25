@@ -5,6 +5,7 @@ import configparser
 import click
 import sys
 import shutil
+import semantic_version as semver
 
 ROOT_DIR = Path(__file__).parent.parent.resolve()
 sys.path.append(str(ROOT_DIR))
@@ -30,7 +31,7 @@ BOARDS = {
 BOARDS_PRE_2_9 = { 
     "xiao_ble": "xiao_ble",
     "adafruit_feather_nrf52840": "adafruit_feather_nrf52840",
-    "nrf5340dk": "nrf5340dk/nrf5340/cpuapp",
+    "nrf5340dk": "nrf5340dk_nrf5340_cpuapp",
 }
 
 
@@ -123,7 +124,11 @@ def build_sample(sample, sdk_dir, build_dir, board, boards_dir, sdk_version, ver
 def main(build_dir, sdk_version, verbose):
     build_dir = Path(build_dir)
     build_dir.mkdir(parents=True, exist_ok=True)
-    for b_id, b_name in BOARDS.items():
+    if semver.Version(sdk_version[1:]) < semver.Version("2.9.0"):
+        boards = BOARDS_PRE_2_9
+    else:
+        boards = BOARDS
+    for b_id, b_name in boards.items():
         board_dir = build_dir / "boards"
         generate_board_file(board_dir, b_id, b_name)
         ini = generate_env_platformio_ini(build_dir, sdk_version, b_id)
