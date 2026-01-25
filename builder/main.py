@@ -24,6 +24,7 @@ from SCons.Script import (
     Default,
     DefaultEnvironment,
 )
+from SCons.Errors import BuildError
 
 import setup
 import nrfutil
@@ -138,16 +139,19 @@ def build_action(target, source, env):
         build_env=build_env,
     )
 
-    zephyr_env.build(
-        board=board.get("build.zephyr.variant", board.id),
-        build_flags=cflags,
-        link_flags=linkflags,
-        dependencies=dependencies_from_env(env),
-        source_files=source_files_from_env(env),
-        pristine=env.GetProjectOption("custom_pristine", "false").lower() == "true",
-        verbose=int(ARGUMENTS.get("PIOVERBOSE", 0)) > 0,  # noqa: F821
-        generate_project_files=env.GetProjectOption("custom_generate_project_files", "true").lower() == "true",
-    )
+    try:
+        zephyr_env.build(
+            board=board.get("build.zephyr.variant", board.id),
+            build_flags=cflags,
+            link_flags=linkflags,
+            dependencies=dependencies_from_env(env),
+            source_files=source_files_from_env(env),
+            pristine=env.GetProjectOption("custom_pristine", "false").lower() == "true",
+            verbose=int(ARGUMENTS.get("PIOVERBOSE", 0)) > 0,  # noqa: F821
+            generate_project_files=env.GetProjectOption("custom_generate_project_files", "true").lower() == "true",
+        )
+    except RuntimeError as e:
+        raise BuildError(errstr=str(e))
 
 
 env.Append(

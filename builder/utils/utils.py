@@ -41,7 +41,7 @@ def exec_command(cmd, msg="Command failed", verbose=False, **kwargs):
             raise RuntimeError(f"{msg}: Command returned non-zero exit status {process.returncode}")
         else:
             raise RuntimeError(
-                f"{msg}: Command {cmd} returned non-zero exit status {process.returncode}: \n{process.stdout}\n{process.stderr}"
+                f"{msg}: Command {' '.join(cmd)} returned non-zero exit status {process.returncode}: \n{process.stdout}\n{process.stderr}"
             )
 
     return process
