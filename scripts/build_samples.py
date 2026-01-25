@@ -1,10 +1,10 @@
-import subprocess
 from pathlib import Path
 import re
 import json
 import configparser
 import click
 import sys
+import shutil
 
 ROOT_DIR = Path(__file__).parent.parent.resolve()
 sys.path.append(str(ROOT_DIR))
@@ -23,8 +23,8 @@ SAMPLES = [
 BOARDS = {
     "xiao_ble": "xiao_ble",
     "adafruit_feather_nrf52840": "adafruit_feather_nrf52840",
-    "nrf5340dk": "nrf5340dk/nrf5340/cpuapp",
-    "nrf54l15dk": "nrf54l15dk/nrf54l15/cpuapp",
+    "nrf5340dk": "nrf5340dk_nrf5340_cpuapp",
+    "nrf54l15dk": "nrf54l15pdk_nrf54l15_cpuapp",
 }
 
 
@@ -102,6 +102,7 @@ def build_sample(sample, sdk_dir, build_dir, board, boards_dir, sdk_version, ver
     sample_dir = sdk_dir / sample
     sample_name = sample_dir.name
     samples_dir = sample_dir.parent
+    shutil.rmtree(build_dir / sample_name, ignore_errors=True)
     ini = generate_sample_platformio_ini(build_dir, sample_name, board, boards_dir, sdk_version)
     print(f"Building sample '{sample}' for board: {board}...")
     run_pio(["-d", str(samples_dir), "-c", str(ini.absolute())], verbose=verbose)
