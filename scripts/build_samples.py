@@ -4,6 +4,13 @@ import re
 import json
 import configparser
 import click
+import sys
+
+ROOT_DIR = Path(__file__).parent.parent.resolve()
+sys.path.append(str(ROOT_DIR))
+sys.path.append(str(ROOT_DIR / "builder"))
+from builder.utils.utils import exec_command
+
 
 ROOT_DIR = Path(__file__).parent.parent.resolve()
 
@@ -21,15 +28,18 @@ BOARDS = {
 }
 
 
-def run_pio(args):
-    result = subprocess.run(["pio"] + args, capture_output=True, text=True)
-    if result.returncode != 0:
-        raise RuntimeError(f"PlatformIO command failed: {' '.join(args)}\n{result.stderr}")
+def run_pio(args, verbose=False):
+    pio_args = ["pio", "run"]
+    if verbose:
+        pio_args.append("-v")
+    pio_args += args
+    result = exec_command(pio_args, msg="PlatformIO command failed", verbose=verbose)
     return result.stdout.strip()
 
 
 def get_env(build_dir: Path, ini: Path):
-    stdout = run_pio(["run", "-d", str(build_dir), "-c", str(ini.absolute()), "--target", "dump_env"])
+    print("Checking our NRF SDK and getting build environment...")
+    stdout = run_pio(["-d", str(build_dir), "-c", str(ini.absolute()), "--target", "dump_env"])
     if match := re.search(r"==== Build Environment ====\n(.*?)\n==== End Build Environment ====", stdout, re.DOTALL):
         env_str = match.group(1)
         return json.loads(env_str)
@@ -88,21 +98,22 @@ def generate_board_file(boards_dir: Path, board_id: str, board_name: str):
     return board_file
 
 
-def build_sample(sample, sdk_dir, build_dir, board, boards_dir, sdk_version):
+def build_sample(sample, sdk_dir, build_dir, board, boards_dir, sdk_version, verbose=False):
     sample_dir = sdk_dir / sample
     sample_name = sample_dir.name
     samples_dir = sample_dir.parent
     ini = generate_sample_platformio_ini(build_dir, sample_name, board, boards_dir, sdk_version)
     print(f"Building sample '{sample}' for board: {board}...")
-    run_pio(["run", "-d", str(samples_dir), "-c", str(ini.absolute())])
+    run_pio(["-d", str(samples_dir), "-c", str(ini.absolute())], verbose=verbose)
     if not (build_dir / sample_name / "sample_env" / "merged.hex").is_file():
         raise RuntimeError(f"Failed to build sample '{sample_name}'")
 
 
 @click.command()
 @click.option("-d", "--build-dir", type=str, default=Path("build"))
+@click.option("-v", "--verbose", is_flag=True, default=False)
 @click.option("-sv", "--sdk_version", type=str, default="v2.9.2")
-def main(build_dir, sdk_version):
+def main(build_dir, sdk_version, verbose):
     build_dir = Path(build_dir)
     build_dir.mkdir(parents=True, exist_ok=True)
     for b_id, b_name in BOARDS.items():
@@ -114,7 +125,7 @@ def main(build_dir, sdk_version):
         with open(build_dir / "dummy.c", "w") as f:
             f.write("int main() { return 0; }")
         for s in SAMPLES:
-            build_sample(s, sdk_dir, build_dir, b_id, board_dir, sdk_version)
+            build_sample(s, sdk_dir, build_dir, b_id, board_dir, sdk_version, verbose)
 
 
 if __name__ == "__main__":

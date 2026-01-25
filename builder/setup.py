@@ -143,11 +143,12 @@ class BuildEnvironment:
             return python_dir / "Scripts" / "python.exe"
         return python_dir / "bin" / "python"
 
-    def run(self, cmd: list[str], msg, **kwargs):
+    def run(self, cmd: list[str], msg, verbose=False, **kwargs):
         return exec_command(
             cmd,
-            msg,
+            msg=msg,
             env=self.env,
+            verbose=verbose,
             **kwargs,
         )
 
