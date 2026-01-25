@@ -2,9 +2,8 @@ from pathlib import Path
 import shutil
 from urllib.parse import urljoin
 import os
-import platform
 
-from utils.utils import download_file, get_platform_slug, get_platform_string
+from utils import download_file, get_platform_slug, get_platform_string
 from setup import BuildEnvironment
 
 NORDIC_BASE_URL = "https://files.nordicsemi.com/artifactory/swtools/external/nrfutil/executables/"
