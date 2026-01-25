@@ -86,7 +86,7 @@ class BuildEnvironment:
 
     @property
     def zephyr_sdk_dir(self):
-        return self.toolchain_dir / "opt" / "zephyr_sdk"
+        return self.toolchain_dir / "opt" / "zephyr-sdk"
 
     @property
     def python_dir(self):
