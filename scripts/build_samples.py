@@ -38,7 +38,7 @@ def run_pio(args, verbose=False):
 
 
 def get_env(build_dir: Path, ini: Path):
-    print("Checking our NRF SDK and getting build environment...")
+    print("Checking out NRF SDK and getting build environment...")
     stdout = run_pio(["-d", str(build_dir), "-c", str(ini.absolute()), "--target", "dump_env"])
     if match := re.search(r"==== Build Environment ====\n(.*?)\n==== End Build Environment ====", stdout, re.DOTALL):
         env_str = match.group(1)
