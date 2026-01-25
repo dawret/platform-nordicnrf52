@@ -107,6 +107,10 @@ jobs:
           key: nrf-sdk-toolchains-${{ matrix.os }}-${{ steps.toolchain-info.outputs.TOOLCHAIN_VERSION }}-${{ github.sha }}
           restore-keys: |
             nrf-sdk-toolchains-${{ matrix.os }}-${{ steps.toolchain-info.outputs.TOOLCHAIN_VERSION }}-
+      - name: Clean build directory
+        shell: bash
+        run: |
+          rm -rf build
       - name: Build Sample
         run: |
           pio pkg install --global --platform symlink://.

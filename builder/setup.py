@@ -120,6 +120,7 @@ class BuildEnvironment:
     def env(self):
         env = os.environ.copy()
         env["PATH"] = env["PATH"].split(os.pathsep)
+        env["LD_LIBRARY_PATH"] = env.get("LD_LIBRARY_PATH", "").split(os.pathsep)
         new_env = {
             "PATH": self._path,
             "ZEPHYR_SDK_INSTALL_DIR": str(self.zephyr_sdk_dir),

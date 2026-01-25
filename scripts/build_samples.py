@@ -23,8 +23,14 @@ SAMPLES = [
 BOARDS = {
     "xiao_ble": "xiao_ble",
     "adafruit_feather_nrf52840": "adafruit_feather_nrf52840",
-    "nrf5340dk": "nrf5340dk_nrf5340_cpuapp",
-    "nrf54l15dk": "nrf54l15pdk_nrf54l15_cpuapp",
+    "nrf5340dk": "nrf5340dk/nrf5340/cpuapp",
+    "nrf54l15dk": "nrf54l15dk/nrf54l15/cpuapp",
+}
+
+BOARDS_PRE_2_9 = { 
+    "xiao_ble": "xiao_ble",
+    "adafruit_feather_nrf52840": "adafruit_feather_nrf52840",
+    "nrf5340dk": "nrf5340dk/nrf5340/cpuapp",
 }
 
 
