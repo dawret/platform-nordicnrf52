@@ -7,7 +7,7 @@ jobs:
     strategy:
       matrix:
         os: [ubuntu-latest, ubuntu-24.04-arm, macos-latest, windows-latest]
-        sdk_version: [v2.9.2, v3.2.0]
+        sdk_version: [v2.6.1, v2.9.2, v3.2.0]
     runs-on: ${{ matrix.os }}
     steps:
       - uses: actions/checkout@v5
@@ -65,7 +65,7 @@ jobs:
     strategy:
       matrix:
         os: [ubuntu-latest, ubuntu-24.04-arm, macos-latest, windows-latest]
-        sdk_version: [v2.9.2, v3.2.0]
+        sdk_version: [v2.6.1, v2.9.2, v3.2.0]
     runs-on: ${{ matrix.os }}
     steps:
       - uses: actions/checkout@v5
