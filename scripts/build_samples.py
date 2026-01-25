@@ -17,7 +17,7 @@ BOARDS = {
     "xiao_ble": "xiao_ble",
     "adafruit_feather_nrf52840": "adafruit_feather_nrf52840",
     "nrf5340dk": "nrf5340dk/nrf5340/cpuapp",
-    "nrf54l15dk": "nrf54l15df/nrf54l15/cpuapp",
+    "nrf54l15dk": "nrf54l15dk/nrf54l15/cpuapp",
 }
 
 
