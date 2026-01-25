@@ -5,7 +5,7 @@ import shutil
 import tarfile
 import yaml
 
-from utils.utils import exec_command, get_platform_string, download_file
+from utils import exec_command, get_platform_string, download_file
 
 EXTENSION = "7z" if os.name == "nt" else "tar.xz"
 SDK_BASE_URL = "https://github.com/zephyrproject-rtos/sdk-ng/releases/download/v{version}/"

@@ -1,4 +1,4 @@
-from utils.usb_vids import VIDS_PIDS
+from usb_vids import VIDS_PIDS
 
 from pathlib import Path
 import re

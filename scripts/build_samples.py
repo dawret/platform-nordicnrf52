@@ -9,7 +9,7 @@ import sys
 ROOT_DIR = Path(__file__).parent.parent.resolve()
 sys.path.append(str(ROOT_DIR))
 sys.path.append(str(ROOT_DIR / "builder"))
-from builder.utils.utils import exec_command
+from builder.utils import exec_command
 
 
 ROOT_DIR = Path(__file__).parent.parent.resolve()
