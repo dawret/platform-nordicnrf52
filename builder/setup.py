@@ -186,7 +186,12 @@ class BuildEnvironment:
         tools_file = os_mapping[platform.system().lower()]
         with open(tools_file) as f:
             tools = yaml.safe_load(f)
-        return tools["zephyr-sdk"]["version"]
+
+        version = tools["zephyr-sdk"]["version"]
+        if version == "0.16.5":
+            # 0.16.5 is broken on linux-arm64, use fixed version
+            version = "0.16.5-1"
+        return version
 
     def download_zephyr_sdk(self, download_dir: Path, setup_python_dir: Path):
         if (self.zephyr_sdk_dir / "sdk_version").is_file() and all(
