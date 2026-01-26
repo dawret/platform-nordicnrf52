@@ -1,8 +1,9 @@
 from dataclasses import dataclass
-import textwrap
-from pathlib import Path
-from sdk_manager import BuildEnvironment
 from itertools import chain
+from pathlib import Path
+import textwrap
+
+from sdk_manager import BuildEnvironment
 
 
 @dataclass

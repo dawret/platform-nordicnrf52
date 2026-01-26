@@ -1,11 +1,11 @@
-from pathlib import Path
 import os
+from pathlib import Path
 import platform
 import shutil
 import tarfile
-import yaml
 
-from utils import exec_command, get_platform_string, download_file
+from utils import download_file, exec_command, get_platform_string
+import yaml
 
 EXTENSION = "7z" if os.name == "nt" else "tar.xz"
 SDK_BASE_URL = "https://github.com/zephyrproject-rtos/sdk-ng/releases/download/v{version}/"

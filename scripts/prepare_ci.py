@@ -1,13 +1,14 @@
-import sys
 from pathlib import Path
+import sys
+
 import click
 
 ROOT_DIR = Path(__file__).parent.parent.resolve()
 sys.path.append(str(ROOT_DIR))
 sys.path.append(str(ROOT_DIR / "builder"))
 
-from builder import nrfutil
-from builder.sdk_manager import BuildEnvironment
+from builder import nrfutil  # noqa: E402
+from builder.sdk_manager import BuildEnvironment  # noqa: E402
 
 
 @click.group()

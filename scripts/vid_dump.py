@@ -1,6 +1,7 @@
-import click
-import re
 from pathlib import Path
+import re
+
+import click
 
 
 @click.command()

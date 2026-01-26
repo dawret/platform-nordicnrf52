@@ -8,4 +8,9 @@ target-version = "py312"
 line-length = 120
 lint.extend-select = [
   "UP",
+  "I",  # isort
 ]
+
+[tool.ruff.lint.isort]
+force-sort-within-sections = true
+order-by-type = false
