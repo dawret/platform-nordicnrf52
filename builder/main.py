@@ -26,7 +26,7 @@ from SCons.Script import (
 )
 from SCons.Errors import BuildError
 
-import setup
+import sdk_manager
 import nrfutil
 from frameworks import zephyr
 import upload
@@ -53,13 +53,17 @@ SDK_DEFAULT_VERSION = "v2.9.2"
 
 try:
     # Try to get SDK version from project options first
-    SDK_VERSION = "v" + str(semver.Version(env.GetProjectOption("custom_framework_version", None)).truncate())
-except:  # noqa: E722
+    version_arg = env.GetProjectOption("custom_framework_version", None)
+    if version_arg:
+        SDK_VERSION = "v" + str(semver.Version(version_arg).truncate())
+    else:
+        SDK_VERSION = SDK_DEFAULT_VERSION
+except (ValueError, TypeError):
     # Fall back to the default version
     SDK_VERSION = SDK_DEFAULT_VERSION
 
 # Setup nrf-sdk and toolchain
-build_env = setup.BuildEnvironment(
+build_env = sdk_manager.BuildEnvironment(
     base_dir=ROOT_DIR / "nrf-sdk",
     platform_dir=ROOT_DIR,
     sdk_version=SDK_VERSION,
@@ -207,7 +211,7 @@ def build_uf2(target, source, env):
         lambda source, target, env: build_env.run(
             [
                 "python",
-                str(build_env.uf2conf),
+                str(build_env.uf2conv),
                 str(source[0].get_abspath()),
                 "-c",
                 "-f",
@@ -261,19 +265,19 @@ target_dfu_nordic = env.PackageDfuNordic(join("$BUILD_DIR", "${PROGNAME}_nordic"
 env.AddPlatformTarget(
     "flash_west",
     target_hex,
-    upload.upload_swd(build_env.env),
+    upload.upload_swd(build_env),
     "Flash using West's default runner",
 )
 env.AddPlatformTarget(
     "flash_pyocd",
     target_hex,
-    upload.upload_swd(build_env.env, "pyocd"),
+    upload.upload_swd(build_env, "pyocd"),
     "Flash using pyOCD",
 )
 env.AddPlatformTarget(
     "flash_jlink",
     target_hex,
-    upload.upload_swd(build_env.env, "jlink"),
+    upload.upload_swd(build_env, "jlink"),
     "Flash using J-Link",
 )
 env.AddPlatformTarget("flash_uf2", target_uf2, upload.upload_uf2_adafruit(build_env), "Flash using UF2")
@@ -286,7 +290,7 @@ env.AddPlatformTarget(
 env.AddPlatformTarget(
     "flash_serial_nordic",
     target_dfu_nordic,
-    upload.upload_serial_nordic(build_env.env),
+    upload.upload_serial_nordic(nrfutil_exe),
     "Flash using Nordic bootloader (serial)",
 )
 

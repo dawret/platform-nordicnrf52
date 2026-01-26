@@ -103,7 +103,7 @@ class BuildEnvironment:
         return self.sdk_dir / "zephyr"
 
     @property
-    def uf2conf(self):
+    def uf2conv(self):
         return self.zephyr_dir / "scripts" / "build" / "uf2conv.py"
 
     @property
