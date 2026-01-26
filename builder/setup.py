@@ -12,7 +12,7 @@ SDK_BASE_URL = "https://github.com/zephyrproject-rtos/sdk-ng/releases/download/v
 SDK_FILE_NAME = f"zephyr-sdk-{{version}}_{get_platform_string()}_minimal.{EXTENSION}"
 PYTHON_VERSION = "3.12"
 PYTHON_SETUP_MODULES = ["west==1.5.0"]
-PYTHON_BUILD_MODULES = ["west==1.5.0", "ninja==1.13.0", "cmake==3.21.0", "pyocd==0.42.0"]
+PYTHON_BUILD_MODULES = ["west==1.5.0", "ninja==1.13.0", "cmake==3.27.0", "pyocd==0.42.0"]
 NRF_SDK_URL = "https://github.com/nrfconnect/sdk-nrf"
 NRF_DISABLED_MODULES = [
     "matter",
