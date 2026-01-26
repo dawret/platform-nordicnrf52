@@ -17,5 +17,7 @@ from platformio.public import PlatformBase
 
 
 class Nordicnrf52Platform(PlatformBase):
+    def configure_default_packages(self, options, targets):
+        pass
     def is_embedded(self):
         return True
