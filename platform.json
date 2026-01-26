@@ -16,7 +16,7 @@
   },
   "repository": {
     "type": "git",
-    "url": "https://github.com/platformio/platform-nordicnrf52.git"
+    "url": "https://github.com/dawret/platform-nordicnrf52.git"
   },
   "version": "12.0.0",
   "frameworks": {
@@ -26,12 +26,6 @@
     }
   },
   "packages": {
-    "framework-zephyr": {
-      "type": "framework",
-      "optional": false,
-      "owner": "dawret",
-      "version": "https://github.com/dawret/framework-sdk-nrf/archive/refs/tags/v2.9.2-2.tar.gz"
-    },
     "tool-adafruit-nrfutil": {
       "owner": "platformio",
       "optional": false,
