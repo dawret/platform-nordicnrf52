@@ -1,14 +1,12 @@
-from usb_ids import VIDS_PIDS
-
 from pathlib import Path
 import re
 import time
 
 from platformio.public import list_serial_ports
-
 from SCons.Script import (
     DefaultEnvironment,
 )
+from usb_ids import VIDS_PIDS
 
 env = DefaultEnvironment()
 platform = env.PioPlatform()

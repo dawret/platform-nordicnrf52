@@ -1,8 +1,8 @@
-import platform
 from pathlib import Path
-import urllib.request
+import platform
 import subprocess
 import threading
+import urllib.request
 
 
 def exec_command(cmd, msg="Command failed", verbose=False, **kwargs):

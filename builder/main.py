@@ -14,21 +14,21 @@
 
 from itertools import chain
 import json
-from os.path import join, isfile
+from os.path import isfile, join
 from pathlib import Path
-import semantic_version as semver
 
+from frameworks import zephyr
+import nrfutil
+from SCons.Errors import BuildError
 from SCons.Script import (
     AlwaysBuild,
+    ARGUMENTS,
     Builder,
     Default,
     DefaultEnvironment,
 )
-from SCons.Errors import BuildError
-
 import sdk_manager
-import nrfutil
-from frameworks import zephyr
+import semantic_version as semver
 import upload
 
 env = DefaultEnvironment()
@@ -151,7 +151,7 @@ def build_action(target, source, env):
             dependencies=dependencies_from_env(env),
             source_files=source_files_from_env(env),
             pristine=env.GetProjectOption("custom_pristine", "false").lower() == "true",
-            verbose=int(ARGUMENTS.get("PIOVERBOSE", 0)) > 0,  # noqa: F821
+            verbose=int(ARGUMENTS.get("PIOVERBOSE", 0)) > 0,
             generate_project_files=env.GetProjectOption("custom_generate_project_files", "true").lower() == "true",
         )
     except RuntimeError as e:

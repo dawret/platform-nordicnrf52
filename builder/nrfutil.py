@@ -1,10 +1,10 @@
+import os
 from pathlib import Path
 import shutil
 from urllib.parse import urljoin
-import os
 
-from utils import download_file, get_platform_slug, get_platform_string
 from sdk_manager import BuildEnvironment
+from utils import download_file, get_platform_slug, get_platform_string
 
 NORDIC_BASE_URL = "https://files.nordicsemi.com/artifactory/swtools/external/nrfutil/executables/"
 EXTENSION = ".exe" if os.name == "nt" else ""

@@ -1,17 +1,17 @@
+import configparser
+import json
 from pathlib import Path
 import re
-import json
-import configparser
-import click
-import sys
 import shutil
+import sys
+
+import click
 import semantic_version as semver
 
 ROOT_DIR = Path(__file__).parent.parent.resolve()
 sys.path.append(str(ROOT_DIR))
 sys.path.append(str(ROOT_DIR / "builder"))
-from builder.utils import exec_command
-
+from builder.utils import exec_command  # noqa: E402
 
 ROOT_DIR = Path(__file__).parent.parent.resolve()
 
@@ -28,7 +28,7 @@ BOARDS = {
     "nrf54l15dk": "nrf54l15dk/nrf54l15/cpuapp",
 }
 
-BOARDS_PRE_2_9 = { 
+BOARDS_PRE_2_9 = {
     "xiao_ble": "xiao_ble",
     "adafruit_feather_nrf52840": "adafruit_feather_nrf52840",
     "nrf5340dk": "nrf5340dk_nrf5340_cpuapp",
