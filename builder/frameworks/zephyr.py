@@ -1,7 +1,7 @@
 from dataclasses import dataclass
 import textwrap
 from pathlib import Path
-from setup import BuildEnvironment
+from sdk_manager import BuildEnvironment
 from itertools import chain
 
 

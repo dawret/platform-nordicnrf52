@@ -1,4 +1,4 @@
-from usb_vids import VIDS_PIDS
+from usb_ids import VIDS_PIDS
 
 from pathlib import Path
 import re
@@ -79,7 +79,7 @@ def upload_swd(build_env, runner=None):
             ENV=build_env.env,
         )
         print(env.subst("$UPLOADCMD"))
-        cmd = env.Action("$UPLOADCMD", "Uploading $SOURCE", chdir=str(build_env.sdk_path))
+        cmd = env.Action("$UPLOADCMD", "Uploading $SOURCE", chdir=str(build_env.sdk_dir))
         return cmd(target, source, env)
 
     return [upload_action]

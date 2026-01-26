@@ -4,7 +4,7 @@ from urllib.parse import urljoin
 import os
 
 from utils import download_file, get_platform_slug, get_platform_string
-from setup import BuildEnvironment
+from sdk_manager import BuildEnvironment
 
 NORDIC_BASE_URL = "https://files.nordicsemi.com/artifactory/swtools/external/nrfutil/executables/"
 EXTENSION = ".exe" if os.name == "nt" else ""

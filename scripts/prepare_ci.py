@@ -7,7 +7,7 @@ sys.path.append(str(ROOT_DIR))
 sys.path.append(str(ROOT_DIR / "builder"))
 
 from builder import nrfutil
-from builder.setup import BuildEnvironment
+from builder.sdk_manager import BuildEnvironment
 
 
 @click.group()
